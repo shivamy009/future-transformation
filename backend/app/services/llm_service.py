@@ -24,19 +24,20 @@ def generate_answer(query: str, contexts: list[str]) -> Optional[str]:
         return "No matching context found in uploaded documents."
 
     joined_context = "\n\n".join(
-        [f"Context {index + 1}: {text}" for index, text in enumerate(contexts)]
+        [f"[{index + 1}] {text}" for index, text in enumerate(contexts)]
     )
 
     system_prompt = (
         "You are a helpful assistant for enterprise knowledge search. "
         "Answer ONLY from the provided contexts. "
-        "If answer is not present, clearly say it is not available in retrieved context."
+        "If answer is not present, clearly say it is not available in retrieved context. "
+        "Cite supporting contexts using bracketed numbers like [1], [2]."
     )
 
     user_prompt = (
         f"Question: {query}\n\n"
         f"Retrieved contexts:\n{joined_context}\n\n"
-        "Provide a concise answer with factual tone."
+        "Provide a concise answer with factual tone and include citations."
     )
 
     client = get_openai_client()

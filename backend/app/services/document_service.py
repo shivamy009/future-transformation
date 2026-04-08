@@ -78,6 +78,8 @@ def upload_document_and_index(
 
     raw_content = file.file.read()
 
+    chunk_items = []
+
     if is_txt:
         try:
             text = raw_content.decode("utf-8")
@@ -86,17 +88,24 @@ def upload_document_and_index(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Text file must be UTF-8 encoded",
             ) from exc
+        chunk_items = [{"text": chunk, "page": None} for chunk in chunk_text(text, chunk_size=850, overlap=120)]
     else:
         try:
             reader = PdfReader(BytesIO(raw_content))
-            text = "\n".join((page.extract_text() or "") for page in reader.pages)
+            for page_index, page in enumerate(reader.pages, start=1):
+                page_text = (page.extract_text() or "").strip()
+                if not page_text:
+                    continue
+                page_chunks = chunk_text(page_text, chunk_size=850, overlap=120)
+                for chunk in page_chunks:
+                    chunk_items.append({"text": chunk, "page": page_index})
         except Exception as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Unable to read PDF content",
             ) from exc
 
-    if not text.strip():
+    if not chunk_items:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Uploaded file has no readable text",
@@ -114,20 +123,25 @@ def upload_document_and_index(
     db.commit()
     db.refresh(document)
 
-    chunks = chunk_text(text, chunk_size=850, overlap=120)
+    chunks = [item["text"] for item in chunk_items]
     vectors = embed_texts(chunks)
 
     pinecone_vectors = []
     for idx, embedding in enumerate(vectors):
+        chunk_item = chunk_items[idx]
+        metadata = {
+            "document_id": document.id,
+            "text": chunk_item["text"],
+            "uploaded_by": uploaded_by,
+        }
+        if chunk_item["page"] is not None:
+            metadata["page"] = chunk_item["page"]
+
         pinecone_vectors.append(
             {
                 "id": f"doc-{document.id}-chunk-{idx}",
                 "values": embedding,
-                "metadata": {
-                    "document_id": document.id,
-                    "text": chunks[idx],
-                    "uploaded_by": uploaded_by,
-                },
+                "metadata": metadata,
             }
         )
 

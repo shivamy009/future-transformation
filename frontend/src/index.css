@@ -147,3 +147,7 @@ h2,
 h3 {
 	font-family: 'Space Grotesk', sans-serif;
 }
+
+.search-highlight {
+	@apply rounded-sm bg-amber-300/35 px-1 text-amber-100;
+}

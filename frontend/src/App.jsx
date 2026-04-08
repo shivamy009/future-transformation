@@ -559,6 +559,35 @@ function SearchPage() {
   const [topK, setTopK] = useState(5)
   const [includeAnswer, setIncludeAnswer] = useState(true)
 
+  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+  const renderHighlightedText = (text, searchText) => {
+    const trimmed = (searchText || '').trim()
+    if (!trimmed) {
+      return text
+    }
+
+    const terms = trimmed
+      .split(/\s+/)
+      .map((term) => term.trim())
+      .filter(Boolean)
+
+    if (terms.length === 0) {
+      return text
+    }
+
+    const pattern = terms.map((term) => escapeRegExp(term)).join('|')
+    const regex = new RegExp(`(${pattern})`, 'gi')
+    const exactRegex = new RegExp(`^(${pattern})$`, 'i')
+    const parts = text.split(regex)
+
+    return parts.map((part, idx) =>
+      exactRegex.test(part)
+        ? <mark key={`${part}-${idx}`} className="search-highlight">{part}</mark>
+        : <span key={`${part}-${idx}`}>{part}</span>,
+    )
+  }
+
   const onSubmit = async (event) => {
     event.preventDefault()
     try {
@@ -603,8 +632,16 @@ function SearchPage() {
           <div className="grid gap-3 md:grid-cols-2">
             {latestSearch.results.map((result, idx) => (
               <div key={`${result.document_id}-${idx}`} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-4">
-                <p className="text-xs text-cyan-300">Doc #{result.document_id} | Score: {result.score.toFixed(4)}</p>
-                <p className="mt-2 text-sm text-slate-200">{result.text}</p>
+                <p className="text-xs text-cyan-300">
+                  {result.document_title} | Score: {result.score.toFixed(4)}
+                  {result.page ? ` | Page ${result.page}` : ''}
+                </p>
+                {result.file_url && (
+                  <a className="mt-1 block text-xs text-emerald-300 underline underline-offset-2" href={result.file_url} target="_blank" rel="noreferrer">
+                    Open source file
+                  </a>
+                )}
+                <p className="mt-2 text-sm text-slate-200">{renderHighlightedText(result.text, latestSearch.query)}</p>
               </div>
             ))}
           </div>

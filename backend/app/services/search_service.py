@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
+from app.models.document import Document
 from app.models.search_query import SearchQuery
 from app.services.embedding_service import embed_text
 from app.services.llm_service import generate_answer
@@ -37,14 +38,42 @@ def perform_semantic_search(
         include_metadata=True,
     )
 
+    doc_ids: set[int] = set()
+    for match in response.matches:
+        metadata = match.metadata or {}
+        doc_id = metadata.get("document_id")
+        if isinstance(doc_id, int):
+            doc_ids.add(doc_id)
+        elif isinstance(doc_id, str) and doc_id.isdigit():
+            doc_ids.add(int(doc_id))
+
+    docs_by_id: dict[int, Document] = {}
+    if doc_ids:
+        documents = db.query(Document).filter(Document.id.in_(doc_ids)).all()
+        docs_by_id = {doc.id: doc for doc in documents}
+
     matches = []
     for match in response.matches:
         metadata = match.metadata or {}
+        raw_doc_id = metadata.get("document_id", 0)
+        document_id = int(raw_doc_id) if str(raw_doc_id).isdigit() else 0
+        document = docs_by_id.get(document_id)
+
+        raw_page = metadata.get("page")
+        page_value = None
+        if isinstance(raw_page, int):
+            page_value = raw_page
+        elif isinstance(raw_page, str) and raw_page.isdigit():
+            page_value = int(raw_page)
+
         matches.append(
             {
-                "document_id": int(metadata.get("document_id", 0)),
+                "document_id": document_id,
+                "document_title": document.title if document else f"Document #{document_id}",
+                "file_url": document.file_path if document else "",
                 "text": metadata.get("text", ""),
                 "score": float(match.score),
+                "page": page_value,
             }
         )
 

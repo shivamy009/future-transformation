@@ -11,8 +11,11 @@ class SearchRequest(BaseModel):
 
 class SearchMatch(BaseModel):
     document_id: int
+    document_title: str
+    file_url: str
     text: str
     score: float
+    page: Optional[int] = None
 
 
 class SearchResponse(BaseModel):
