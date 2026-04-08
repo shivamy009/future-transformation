@@ -30,6 +30,20 @@ class Settings:
         for origin in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:5173").split(",")
         if origin.strip()
     ]
+    UPLOADS_DIR: str = os.getenv("UPLOADS_DIR", str(BASE_DIR / "uploads"))
+
+    PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")
+    PINECONE_ENVIRONMENT: str = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
+    PINECONE_CLOUD: str = os.getenv("PINECONE_CLOUD", "aws")
+    PINECONE_INDEX_NAME: str = os.getenv("PINECONE_INDEX_NAME", "documents-index")
+
+    OPENAI_API_KEY: str = os.getenv("OPENAI_API_KEY", "")
+    OPENAI_EMBEDDING_MODEL: str = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-3-small")
+    OPENAI_CHAT_MODEL: str = os.getenv("OPENAI_CHAT_MODEL", "gpt-4o-mini")
+
+    EMBEDDING_DIMENSION: int = int(os.getenv("EMBEDDING_DIMENSION", "1536"))
+    SEARCH_TOP_K_DEFAULT: int = int(os.getenv("SEARCH_TOP_K_DEFAULT", "5"))
+    SEARCH_TOP_K_MAX: int = int(os.getenv("SEARCH_TOP_K_MAX", "20"))
 
     @property
     def sqlalchemy_database_uri(self) -> str:

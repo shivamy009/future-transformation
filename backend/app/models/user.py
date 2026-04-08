@@ -18,3 +18,11 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     role = relationship("Role", back_populates="users")
+    assigned_tasks = relationship(
+        "Task", foreign_keys="Task.assigned_to", back_populates="assignee"
+    )
+    created_tasks = relationship(
+        "Task", foreign_keys="Task.created_by", back_populates="creator"
+    )
+    documents = relationship("Document", back_populates="uploader")
+    search_queries = relationship("SearchQuery", back_populates="user")
