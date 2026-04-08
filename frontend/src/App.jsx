@@ -509,7 +509,7 @@ function DocumentsPage() {
   const onSubmit = async (event) => {
     event.preventDefault()
     if (!docFile) {
-      toast.error('Please choose a .txt file')
+      toast.error('Please choose a .txt or .pdf file')
       return
     }
     try {
@@ -532,8 +532,14 @@ function DocumentsPage() {
           <input className="field-input" value={docTitle} onChange={(event) => setDocTitle(event.target.value)} required />
         </label>
         <label className="block">
-          <span className="field-label">TXT File</span>
-          <input className="field-input" type="file" accept=".txt,text/plain" onChange={(event) => setDocFile(event.target.files?.[0] || null)} required />
+          <span className="field-label">Document File</span>
+          <input
+            className="field-input"
+            type="file"
+            accept=".txt,.pdf,text/plain,application/pdf"
+            onChange={(event) => setDocFile(event.target.files?.[0] || null)}
+            required
+          />
         </label>
         <button className="btn-primary w-full" disabled={uploadLoading} type="submit">{uploadLoading ? 'Uploading...' : 'Upload & Index'}</button>
       </form>

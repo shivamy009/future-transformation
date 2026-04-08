@@ -5,6 +5,7 @@ from app.core.config import settings
 
 _pc_client = None
 _index = None
+_index_dimension = None
 
 
 def _get_client() -> Pinecone:
@@ -46,3 +47,20 @@ def get_pinecone_index():
         init_pinecone_index()
         _index = _get_client().Index(settings.PINECONE_INDEX_NAME)
     return _index
+
+
+def get_pinecone_index_dimension() -> int:
+    global _index_dimension
+    if _index_dimension is not None:
+        return _index_dimension
+
+    try:
+        description = _get_client().describe_index(settings.PINECONE_INDEX_NAME)
+        if hasattr(description, "dimension"):
+            _index_dimension = int(description.dimension)
+        else:
+            _index_dimension = int(description["dimension"])
+    except Exception:
+        _index_dimension = settings.EMBEDDING_DIMENSION
+
+    return _index_dimension

@@ -3,6 +3,7 @@ from typing import List
 from openai import OpenAI
 
 from app.core.config import settings
+from app.services.pinecone_service import get_pinecone_index_dimension
 
 
 _client = None
@@ -20,7 +21,7 @@ def get_openai_client() -> OpenAI:
 def _embedding_options() -> dict:
     options = {"model": settings.OPENAI_EMBEDDING_MODEL}
     if settings.OPENAI_EMBEDDING_MODEL.startswith("text-embedding-3"):
-        options["dimensions"] = settings.EMBEDDING_DIMENSION
+        options["dimensions"] = get_pinecone_index_dimension()
     return options
 
 

@@ -30,7 +30,12 @@ class Settings:
         for origin in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:5173").split(",")
         if origin.strip()
     ]
-    UPLOADS_DIR: str = os.getenv("UPLOADS_DIR", str(BASE_DIR / "uploads"))
+
+    IMAGEKIT_PUBLIC_KEY: str = os.getenv("IMAGEKIT_PUBLIC_KEY", "")
+    IMAGEKIT_PRIVATE_KEY: str = os.getenv("IMAGEKIT_PRIVATE_KEY", "")
+    IMAGEKIT_URL_ENDPOINT: str = os.getenv("IMAGEKIT_URL_ENDPOINT", "")
+    IMAGEKIT_UPLOAD_ENDPOINT: str = os.getenv("IMAGEKIT_UPLOAD_ENDPOINT", "https://upload.imagekit.io/api/v1/files/upload")
+    IMAGEKIT_FOLDER: str = os.getenv("IMAGEKIT_FOLDER", "/future-transformation-docs")
 
     PINECONE_API_KEY: str = os.getenv("PINECONE_API_KEY", "")
     PINECONE_ENVIRONMENT: str = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")

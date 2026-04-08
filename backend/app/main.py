@@ -1,4 +1,3 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -12,8 +11,6 @@ from app.routers.documents import router as documents_router
 from app.routers.search import router as search_router
 from app.routers.tasks import router as tasks_router
 from app.services.pinecone_service import init_pinecone_index
-from app.models import activity_log, role, user
-from app.routers.auth import router as auth_router
 
 
 app = FastAPI(title=settings.PROJECT_NAME)
@@ -30,7 +27,6 @@ app.add_middleware(
 @app.on_event("startup")
 def on_startup() -> None:
     Base.metadata.create_all(bind=engine)
-    os.makedirs(settings.UPLOADS_DIR, exist_ok=True)
 
     if settings.PINECONE_API_KEY:
         init_pinecone_index()
