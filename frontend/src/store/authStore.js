@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-import { adminCheckApi, loginApi, meApi, registerUserApi } from '../lib/api'
+import { adminCheckApi, loginApi, meApi, registerUserApi, signupApi } from '../lib/api'
 
 export const useAuthStore = create(
   persist(
@@ -29,6 +29,18 @@ export const useAuthStore = create(
           })
 
           return me
+        } catch (error) {
+          set({ loading: false })
+          throw error
+        }
+      },
+
+      signup: async (payload) => {
+        set({ loading: true })
+        try {
+          const created = await signupApi(payload)
+          set({ loading: false })
+          return created
         } catch (error) {
           set({ loading: false })
           throw error

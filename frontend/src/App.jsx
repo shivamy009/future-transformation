@@ -6,11 +6,14 @@ import { useAppStore } from './store/appStore'
 import { useAuthStore } from './store/authStore'
 
 function LoginPage() {
+  const [mode, setMode] = useState('login')
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('admin@example.com')
   const [password, setPassword] = useState('ChangeThisAdminPassword123')
 
   const loading = useAuthStore((state) => state.loading)
   const login = useAuthStore((state) => state.login)
+  const signup = useAuthStore((state) => state.signup)
   const token = useAuthStore((state) => state.token)
 
   const navigate = useNavigate()
@@ -23,23 +26,89 @@ function LoginPage() {
 
   const onSubmit = async (event) => {
     event.preventDefault()
+    if (mode === 'login') {
+      try {
+        await login(email, password)
+        toast.success('Login successful')
+        navigate('/tasks', { replace: true })
+      } catch (error) {
+        toast.error(error.message || 'Login failed')
+      }
+      return
+    }
+
     try {
+      await signup({ email, full_name: fullName, password })
+      toast.success('Signup successful. You can now use the app as a user.')
       await login(email, password)
-      toast.success('Login successful')
       navigate('/tasks', { replace: true })
     } catch (error) {
-      toast.error(error.message || 'Login failed')
+      toast.error(error.message || 'Signup failed')
     }
   }
 
   return (
-    <section className="mx-auto grid min-h-screen w-full max-w-6xl place-items-center px-4 py-8">
-      <div className="glass-card w-full max-w-md">
+    <section className="mx-auto grid min-h-screen w-full max-w-7xl grid-cols-1 gap-6 px-4 py-8 lg:grid-cols-2 lg:items-center">
+      <div className="hero-panel">
         <p className="eyebrow">Future Transformation</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-100">AI Work Console</h1>
-        <p className="mt-2 text-sm text-slate-300">Sign in to manage tasks, documents, and search intelligence.</p>
+        <h1 className="mt-3 text-4xl font-semibold leading-tight text-slate-100 md:text-5xl">
+          Build knowledge-driven workflows with AI confidence.
+        </h1>
+        <p className="mt-4 max-w-xl text-base text-slate-300">
+          Manage documents, semantic search, and tasks in one modern workspace optimized for teams.
+        </p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <div className="feature-tile">
+            <p className="feature-title">Smart Search</p>
+            <p className="feature-copy">OpenAI embeddings + LLM answers from your indexed documents.</p>
+          </div>
+          <div className="feature-tile">
+            <p className="feature-title">Role Controls</p>
+            <p className="feature-copy">Admin and user workflows with clean RBAC boundaries.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="glass-card w-full max-w-lg justify-self-center">
+        <div className="auth-switcher">
+          <button
+            type="button"
+            className={mode === 'login' ? 'auth-tab auth-tab-active' : 'auth-tab'}
+            onClick={() => setMode('login')}
+          >
+            Login
+          </button>
+          <button
+            type="button"
+            className={mode === 'signup' ? 'auth-tab auth-tab-active' : 'auth-tab'}
+            onClick={() => setMode('signup')}
+          >
+            Signup
+          </button>
+        </div>
+
+        <h2 className="mt-5 text-2xl font-semibold text-slate-100">
+          {mode === 'login' ? 'Welcome back' : 'Create user account'}
+        </h2>
+        <p className="mt-1 text-sm text-slate-300">
+          {mode === 'login'
+            ? 'Use your existing credentials to continue.'
+            : 'Signup creates only user role accounts. Admin creation remains restricted.'}
+        </p>
 
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+          {mode === 'signup' && (
+            <label className="block">
+              <span className="field-label">Full Name</span>
+              <input
+                className="field-input"
+                value={fullName}
+                onChange={(event) => setFullName(event.target.value)}
+                required
+              />
+            </label>
+          )}
+
           <label className="block">
             <span className="field-label">Email</span>
             <input className="field-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
@@ -51,7 +120,13 @@ function LoginPage() {
           </label>
 
           <button className="btn-primary w-full" type="submit" disabled={loading}>
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading
+              ? mode === 'login'
+                ? 'Signing in...'
+                : 'Creating account...'
+              : mode === 'login'
+                ? 'Sign In'
+                : 'Create User Account'}
           </button>
         </form>
       </div>
@@ -68,12 +143,9 @@ function AppShell({ children }) {
   const navigate = useNavigate()
 
   const links = useMemo(() => {
-    const base = [
-      { to: '/tasks', label: 'Tasks' },
-      { to: '/documents', label: 'Documents' },
-      { to: '/search', label: 'Search' },
-    ]
+    const base = [{ to: '/tasks', label: 'Tasks' }, { to: '/search', label: 'Search' }]
     if (role === 'admin') {
+      base.push({ to: '/documents', label: 'Documents' })
       base.push({ to: '/users', label: 'Users' })
       base.push({ to: '/analytics', label: 'Analytics' })
     }
@@ -153,7 +225,7 @@ function TasksPage() {
       page,
       page_size: 10,
       status: statusFilter || undefined,
-      assigned_to: assignedFilter || undefined,
+      assigned_to: role === 'admin' ? assignedFilter || undefined : undefined,
     }).catch((error) => toast.error(error.message || 'Unable to fetch tasks'))
   }, [fetchTasks, token, page, statusFilter, assignedFilter])
 
@@ -176,7 +248,12 @@ function TasksPage() {
       setTaskDescription('')
       setTaskAssignee('')
       setPage(1)
-      await fetchTasks(token, { page: 1, page_size: 10, status: statusFilter || undefined, assigned_to: assignedFilter || undefined })
+      await fetchTasks(token, {
+        page: 1,
+        page_size: 10,
+        status: statusFilter || undefined,
+        assigned_to: role === 'admin' ? assignedFilter || undefined : undefined,
+      })
     } catch (error) {
       toast.error(error.message || 'Unable to create task')
     }
@@ -226,15 +303,29 @@ function TasksPage() {
             <option value="pending">Pending</option>
             <option value="completed">Completed</option>
           </select>
-          <input
-            className="field-input"
-            type="number"
-            min="1"
-            placeholder="assigned_to"
-            value={assignedFilter}
-            onChange={(event) => { setAssignedFilter(event.target.value); setPage(1) }}
-          />
-          <button className="btn-secondary md:col-span-2" onClick={() => fetchTasks(token, { page, page_size: 10, status: statusFilter || undefined, assigned_to: assignedFilter || undefined })}>
+          {role === 'admin' ? (
+            <input
+              className="field-input"
+              type="number"
+              min="1"
+              placeholder="assigned_to"
+              value={assignedFilter}
+              onChange={(event) => { setAssignedFilter(event.target.value); setPage(1) }}
+            />
+          ) : (
+            <div />
+          )}
+          <button
+            className="btn-secondary md:col-span-2"
+            onClick={() =>
+              fetchTasks(token, {
+                page,
+                page_size: 10,
+                status: statusFilter || undefined,
+                assigned_to: role === 'admin' ? assignedFilter || undefined : undefined,
+              })
+            }
+          >
             Refresh
           </button>
         </div>
@@ -493,9 +584,11 @@ function AppRoutes() {
         path="/documents"
         element={(
           <ProtectedRoute>
-            <AppShell>
-              <DocumentsPage />
-            </AppShell>
+            <AdminRoute>
+              <AppShell>
+                <DocumentsPage />
+              </AppShell>
+            </AdminRoute>
           </ProtectedRoute>
         )}
       />

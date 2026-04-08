@@ -49,6 +49,16 @@ export function loginApi(email, password) {
   })
 }
 
+export function signupApi(payload) {
+  return apiRequest('/auth/signup', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
 export function meApi(token) {
   return apiRequest('/auth/me', {
     method: 'GET',

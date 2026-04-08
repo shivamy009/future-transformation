@@ -90,6 +90,34 @@ textarea.field-input {
 	@apply border-cyan-300/40 bg-cyan-300/10 text-cyan-200;
 }
 
+.hero-panel {
+	@apply rounded-3xl border border-slate-200/10 bg-slate-900/40 p-7 shadow-2xl shadow-black/30 backdrop-blur-xl;
+}
+
+.feature-tile {
+	@apply rounded-2xl border border-slate-200/10 bg-slate-950/40 p-4;
+}
+
+.feature-title {
+	@apply text-sm font-semibold uppercase tracking-wide text-cyan-300;
+}
+
+.feature-copy {
+	@apply mt-1 text-sm text-slate-300;
+}
+
+.auth-switcher {
+	@apply inline-flex w-full rounded-xl border border-slate-200/10 bg-slate-950/40 p-1;
+}
+
+.auth-tab {
+	@apply flex-1 rounded-lg px-3 py-2 text-sm font-semibold text-slate-300 transition;
+}
+
+.auth-tab-active {
+	@apply bg-cyan-300/15 text-cyan-200;
+}
+
 h1,
 h2,
 h3 {

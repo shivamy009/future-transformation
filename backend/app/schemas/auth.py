@@ -17,3 +17,9 @@ class UserRegister(BaseModel):
     full_name: str
     password: str
     role: str = "user"
+
+
+class UserSignup(BaseModel):
+    email: EmailStr
+    full_name: str
+    password: str

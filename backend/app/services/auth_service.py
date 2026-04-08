@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.auth import LoginResponse, UserRegister
+from app.schemas.auth import LoginResponse, UserRegister, UserSignup
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User:
@@ -55,3 +55,13 @@ def create_user(db: Session, payload: UserRegister) -> User:
     db.commit()
     db.refresh(user)
     return user
+
+
+def signup_user(db: Session, payload: UserSignup) -> User:
+    register_payload = UserRegister(
+        email=payload.email,
+        full_name=payload.full_name,
+        password=payload.password,
+        role="user",
+    )
+    return create_user(db, register_payload)
