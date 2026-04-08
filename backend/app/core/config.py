@@ -25,6 +25,11 @@ class Settings:
 
     ADMIN_EMAIL: str = os.getenv("ADMIN_EMAIL", "admin@example.com")
     ADMIN_PASSWORD: str = os.getenv("ADMIN_PASSWORD", "ChangeThisAdminPassword123")
+    BACKEND_CORS_ORIGINS: list[str] = [
+        origin.strip()
+        for origin in os.getenv("BACKEND_CORS_ORIGINS", "http://localhost:5173").split(",")
+        if origin.strip()
+    ]
 
     @property
     def sqlalchemy_database_uri(self) -> str:
