@@ -593,40 +593,13 @@ function SearchPage() {
 
   const [query, setQuery] = useState('')
 
-  const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-  const renderHighlightedText = (text, searchText) => {
-    const trimmed = (searchText || '').trim()
-    if (!trimmed) {
-      return text
-    }
-
-    const terms = trimmed
-      .split(/\s+/)
-      .map((term) => term.trim())
-      .filter(Boolean)
-
-    if (terms.length === 0) {
-      return text
-    }
-
-    const pattern = terms.map((term) => escapeRegExp(term)).join('|')
-    const regex = new RegExp(`(${pattern})`, 'gi')
-    const exactRegex = new RegExp(`^(${pattern})$`, 'i')
-    const parts = text.split(regex)
-
-    return parts.map((part, idx) =>
-      exactRegex.test(part)
-        ? <mark key={`${part}-${idx}`} className="search-highlight">{part}</mark>
-        : <span key={`${part}-${idx}`}>{part}</span>,
-    )
-  }
+  const formatLlmAnswer = (answer) => (answer || '').replace(/`/g, '').trim()
 
   const onSubmit = async (event) => {
     event.preventDefault()
     try {
-      const data = await runSearch(token, { query, top_k: 5, include_answer: true })
-      toast.success(`Found ${data.results.length} matches`)
+      await runSearch(token, { query, top_k: 5, include_answer: true })
+      toast.success('Answer generated')
       if (role === 'admin') await fetchAnalytics(token)
     } catch (error) {
       toast.error(error.message || 'Search failed')
@@ -646,27 +619,12 @@ function SearchPage() {
 
       {latestSearch && (
         <div className="mt-5 space-y-4">
-          {latestSearch.answer && (
-            <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">LLM Answer</p>
-              <p className="mt-1 text-sm text-slate-100"><Sparkles className="icon-inline" aria-hidden="true" />{latestSearch.answer}</p>
-            </div>
-          )}
-          <div className="grid gap-3 md:grid-cols-2">
-            {latestSearch.results.map((result, idx) => (
-              <div key={`${result.document_id}-${idx}`} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-4">
-                <p className="text-xs text-cyan-300">
-                  {result.document_title} | Score: {result.score.toFixed(4)}
-                  {result.page ? ` | Page ${result.page}` : ''}
-                </p>
-                {result.file_url && (
-                  <a className="mt-1 block text-xs text-emerald-300 underline underline-offset-2" href={result.file_url} target="_blank" rel="noreferrer">
-                    Open source file
-                  </a>
-                )}
-                <p className="mt-2 text-sm text-slate-200">{renderHighlightedText(result.text, latestSearch.query)}</p>
-              </div>
-            ))}
+          <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">LLM Answer</p>
+            <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-slate-100">
+              <Sparkles className="icon-inline" aria-hidden="true" />
+              {formatLlmAnswer(latestSearch.answer) || 'No grounded answer found in uploaded documents.'}
+            </p>
           </div>
         </div>
       )}

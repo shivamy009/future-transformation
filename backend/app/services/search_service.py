@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
 from typing import Optional
+import re
 
 from sqlalchemy.orm import Session
 
@@ -9,6 +10,44 @@ from app.models.search_query import SearchQuery
 from app.services.embedding_service import embed_text
 from app.services.llm_service import generate_answer
 from app.services.pinecone_service import get_pinecone_index
+
+
+def _tokenize(text: str) -> set[str]:
+    return {
+        token
+        for token in re.findall(r"[a-zA-Z0-9]+", (text or "").lower())
+        if len(token) >= 2
+    }
+
+
+def _parse_doc_id(raw_doc_id) -> int:
+    if isinstance(raw_doc_id, int):
+        return raw_doc_id
+    if isinstance(raw_doc_id, float):
+        return int(raw_doc_id)
+    if isinstance(raw_doc_id, str):
+        candidate = raw_doc_id.strip()
+        if candidate.isdigit():
+            return int(candidate)
+        try:
+            return int(float(candidate))
+        except ValueError:
+            return 0
+    return 0
+
+
+def _is_relevant_match(query_text: str, match_item: dict) -> bool:
+    if not match_item["file_url"] or not match_item["text"].strip():
+        return False
+
+    if match_item["score"] >= settings.SEARCH_MIN_RELEVANCE_SCORE:
+        return True
+
+    query_terms = _tokenize(query_text)
+    text_terms = _tokenize(match_item["text"])
+    # Fallback: allow grounded answer when there is explicit lexical overlap.
+    overlap_count = len(query_terms.intersection(text_terms))
+    return overlap_count >= 1
 
 
 def perform_semantic_search(
@@ -41,11 +80,9 @@ def perform_semantic_search(
     doc_ids: set[int] = set()
     for match in response.matches:
         metadata = match.metadata or {}
-        doc_id = metadata.get("document_id")
-        if isinstance(doc_id, int):
-            doc_ids.add(doc_id)
-        elif isinstance(doc_id, str) and doc_id.isdigit():
-            doc_ids.add(int(doc_id))
+        document_id = _parse_doc_id(metadata.get("document_id"))
+        if document_id > 0:
+            doc_ids.add(document_id)
 
     docs_by_id: dict[int, Document] = {}
     if doc_ids:
@@ -55,8 +92,7 @@ def perform_semantic_search(
     matches = []
     for match in response.matches:
         metadata = match.metadata or {}
-        raw_doc_id = metadata.get("document_id", 0)
-        document_id = int(raw_doc_id) if str(raw_doc_id).isdigit() else 0
+        document_id = _parse_doc_id(metadata.get("document_id", 0))
         document = docs_by_id.get(document_id)
 
         raw_page = metadata.get("page")
@@ -77,9 +113,14 @@ def perform_semantic_search(
             }
         )
 
+    source_matches = [item for item in matches if item["file_url"] and item["text"].strip()]
+
+    relevant_matches = [item for item in source_matches if _is_relevant_match(query_text, item)]
+
     answer = None
-    if include_answer:
-        contexts = [item["text"] for item in matches if item["text"]]
+    if include_answer and source_matches:
+        context_candidates = relevant_matches if relevant_matches else source_matches
+        contexts = [item["text"] for item in context_candidates[:5]]
         answer = generate_answer(query_text, contexts)
 
-    return matches, answer
+    return source_matches, answer

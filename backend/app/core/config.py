@@ -49,6 +49,7 @@ class Settings:
     EMBEDDING_DIMENSION: int = int(os.getenv("EMBEDDING_DIMENSION", "1536"))
     SEARCH_TOP_K_DEFAULT: int = int(os.getenv("SEARCH_TOP_K_DEFAULT", "5"))
     SEARCH_TOP_K_MAX: int = int(os.getenv("SEARCH_TOP_K_MAX", "20"))
+    SEARCH_MIN_RELEVANCE_SCORE: float = float(os.getenv("SEARCH_MIN_RELEVANCE_SCORE", "0.10"))
 
     @property
     def sqlalchemy_database_uri(self) -> str:

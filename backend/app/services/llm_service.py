@@ -21,7 +21,7 @@ def generate_answer(query: str, contexts: list[str]) -> Optional[str]:
         return None
 
     if not contexts:
-        return "No matching context found in uploaded documents."
+        return None
 
     joined_context = "\n\n".join(
         [f"[{index + 1}] {text}" for index, text in enumerate(contexts)]
