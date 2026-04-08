@@ -39,8 +39,8 @@ export const useAppStore = create((set, get) => ({
     return created
   },
 
-  markTaskCompleted: async (token, taskId) => {
-    const updated = await updateTaskStatusApi(token, taskId, 'completed')
+  updateTaskStatus: async (token, taskId, status) => {
+    const updated = await updateTaskStatusApi(token, taskId, status)
     set((state) => ({
       tasks: state.tasks.map((task) => (task.id === updated.id ? updated : task)),
     }))

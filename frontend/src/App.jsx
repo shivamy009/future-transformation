@@ -1,4 +1,21 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  BarChart3,
+  BookUser,
+  BrainCircuit,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  LayoutList,
+  LogIn,
+  LogOut,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  RotateCcw,
+  UserPlus,
+} from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
@@ -59,10 +76,12 @@ function LoginPage() {
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="feature-tile">
+            <Search className="feature-icon" aria-hidden="true" />
             <p className="feature-title">Smart Search</p>
             <p className="feature-copy">OpenAI embeddings + LLM answers from your indexed documents.</p>
           </div>
           <div className="feature-tile">
+            <ShieldCheck className="feature-icon" aria-hidden="true" />
             <p className="feature-title">Role Controls</p>
             <p className="feature-copy">Admin and user workflows with clean RBAC boundaries.</p>
           </div>
@@ -76,6 +95,7 @@ function LoginPage() {
             className={mode === 'login' ? 'auth-tab auth-tab-active' : 'auth-tab'}
             onClick={() => setMode('login')}
           >
+            <LogIn className="icon-inline" aria-hidden="true" />
             Login
           </button>
           <button
@@ -83,6 +103,7 @@ function LoginPage() {
             className={mode === 'signup' ? 'auth-tab auth-tab-active' : 'auth-tab'}
             onClick={() => setMode('signup')}
           >
+            <UserPlus className="icon-inline" aria-hidden="true" />
             Signup
           </button>
         </div>
@@ -120,6 +141,7 @@ function LoginPage() {
           </label>
 
           <button className="btn-primary w-full" type="submit" disabled={loading}>
+            {mode === 'login' ? <LogIn className="icon-inline" aria-hidden="true" /> : <UserPlus className="icon-inline" aria-hidden="true" />}
             {loading
               ? mode === 'login'
                 ? 'Signing in...'
@@ -143,11 +165,14 @@ function AppShell({ children }) {
   const navigate = useNavigate()
 
   const links = useMemo(() => {
-    const base = [{ to: '/tasks', label: 'Tasks' }, { to: '/search', label: 'Search' }]
+    const base = [
+      { to: '/tasks', label: 'Tasks', icon: LayoutList },
+      { to: '/search', label: 'Search', icon: Search },
+    ]
     if (role === 'admin') {
-      base.push({ to: '/documents', label: 'Documents' })
-      base.push({ to: '/users', label: 'Users' })
-      base.push({ to: '/analytics', label: 'Analytics' })
+      base.push({ to: '/documents', label: 'Documents', icon: FileText })
+      base.push({ to: '/users', label: 'Users', icon: BookUser })
+      base.push({ to: '/analytics', label: 'Analytics', icon: BarChart3 })
     }
     return base
   }, [role])
@@ -166,15 +191,17 @@ function AppShell({ children }) {
           <h2 className="mt-1 text-2xl font-semibold text-slate-100">Welcome, {user?.full_name}</h2>
           <p className="text-sm text-slate-300">{user?.email}</p>
         </div>
-        <button className="btn-secondary" onClick={onLogout}>Logout</button>
+        <button className="btn-secondary" onClick={onLogout}><LogOut className="icon-inline" aria-hidden="true" />Logout</button>
       </header>
 
       <nav className="glass-card mb-5 overflow-x-auto p-2">
         <div className="flex min-w-max gap-2">
           {links.map((link) => {
             const active = location.pathname === link.to
+            const Icon = link.icon
             return (
               <Link key={link.to} to={link.to} className={active ? 'nav-pill nav-pill-active' : 'nav-pill'}>
+                <Icon className="icon-inline" aria-hidden="true" />
                 {link.label}
               </Link>
             )
@@ -211,7 +238,7 @@ function TasksPage() {
   const fetchTasks = useAppStore((state) => state.fetchTasks)
   const fetchUsers = useAppStore((state) => state.fetchUsers)
   const createTask = useAppStore((state) => state.createTask)
-  const markTaskCompleted = useAppStore((state) => state.markTaskCompleted)
+  const updateTaskStatus = useAppStore((state) => state.updateTaskStatus)
 
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDescription, setTaskDescription] = useState('')
@@ -219,6 +246,11 @@ function TasksPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [assignedFilter, setAssignedFilter] = useState('')
   const [page, setPage] = useState(1)
+
+  const assignableUsers = useMemo(
+    () => users.filter((u) => (u.role || '').toLowerCase() === 'user'),
+    [users],
+  )
 
   useEffect(() => {
     fetchTasks(token, {
@@ -259,10 +291,11 @@ function TasksPage() {
     }
   }
 
-  const onMarkCompleted = async (taskId) => {
+  const onToggleStatus = async (taskId, currentStatus) => {
+    const nextStatus = currentStatus === 'completed' ? 'pending' : 'completed'
     try {
-      await markTaskCompleted(token, taskId)
-      toast.success('Task marked completed')
+      await updateTaskStatus(token, taskId, nextStatus)
+      toast.success(`Task marked ${nextStatus}`)
     } catch (error) {
       toast.error(error.message || 'Unable to update task')
     }
@@ -272,7 +305,7 @@ function TasksPage() {
     <div className="space-y-5">
       {role === 'admin' && (
         <div className="glass-card">
-          <h3 className="text-lg font-semibold text-slate-100">Create Task</h3>
+          <h3 className="text-lg font-semibold text-slate-100"><LayoutList className="icon-inline" aria-hidden="true" />Create Task</h3>
           <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateTask}>
             <label className="block md:col-span-2">
               <span className="field-label">Title</span>
@@ -286,7 +319,7 @@ function TasksPage() {
               <span className="field-label">Assign User</span>
               <select className="field-input" value={taskAssignee} onChange={(event) => setTaskAssignee(event.target.value)} required>
                 <option value="">{usersLoading ? 'Loading users...' : 'Select user'}</option>
-                {users.map((u) => (
+                {assignableUsers.map((u) => (
                   <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
                 ))}
               </select>
@@ -343,7 +376,10 @@ function TasksPage() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className={`status-chip ${task.status === 'completed' ? 'status-done' : 'status-pending'}`}>{task.status}</span>
-                  {task.status === 'pending' && <button className="btn-secondary" onClick={() => onMarkCompleted(task.id)}>Mark Completed</button>}
+                  <button className="btn-secondary" onClick={() => onToggleStatus(task.id, task.status)}>
+                    {task.status === 'pending' ? <CheckCircle2 className="icon-inline" aria-hidden="true" /> : <RotateCcw className="icon-inline" aria-hidden="true" />}
+                    {task.status === 'pending' ? 'Mark Completed' : 'Mark Pending'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -353,9 +389,9 @@ function TasksPage() {
         <div className="mt-4 flex items-center justify-between">
           <p className="text-xs text-slate-400">Total: {tasksMeta.total || 0}</p>
           <div className="flex items-center gap-2">
-            <button className="btn-secondary" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>Prev</button>
+            <button className="btn-secondary" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}><ChevronLeft className="icon-inline" aria-hidden="true" /></button>
             <span className="text-sm text-slate-300">Page {page}</span>
-            <button className="btn-secondary" onClick={() => setPage((prev) => prev + 1)} disabled={page * 10 >= (tasksMeta.total || 0)}>Next</button>
+            <button className="btn-secondary" onClick={() => setPage((prev) => prev + 1)} disabled={page * 10 >= (tasksMeta.total || 0)}><ChevronRight className="icon-inline" aria-hidden="true" /></button>
           </div>
         </div>
       </div>
@@ -390,7 +426,7 @@ function DocumentsPage() {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-semibold text-slate-100">Upload Document</h3>
+      <h3 className="text-lg font-semibold text-slate-100"><FileText className="icon-inline" aria-hidden="true" />Upload Document</h3>
       <form className="mt-4 space-y-3" onSubmit={onSubmit}>
         <label className="block">
           <span className="field-label">Title</span>
@@ -431,7 +467,7 @@ function SearchPage() {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-semibold text-slate-100">Semantic Search + LLM</h3>
+      <h3 className="text-lg font-semibold text-slate-100"><BrainCircuit className="icon-inline" aria-hidden="true" />Semantic Search + LLM</h3>
       <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={onSubmit}>
         <label className="block md:col-span-2">
           <span className="field-label">Query</span>
@@ -456,7 +492,7 @@ function SearchPage() {
           {latestSearch.answer && (
             <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4">
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">LLM Answer</p>
-              <p className="mt-1 text-sm text-slate-100">{latestSearch.answer}</p>
+              <p className="mt-1 text-sm text-slate-100"><Sparkles className="icon-inline" aria-hidden="true" />{latestSearch.answer}</p>
             </div>
           )}
           <div className="grid gap-3 md:grid-cols-2">
@@ -485,6 +521,12 @@ function UsersPage() {
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('user')
+  const [usersTab, setUsersTab] = useState('user')
+
+  const filteredUsers = useMemo(
+    () => users.filter((u) => (u.role || '').toLowerCase() === usersTab),
+    [users, usersTab],
+  )
 
   useEffect(() => {
     fetchUsers(token).catch((error) => toast.error(error.message || 'Unable to fetch users'))
@@ -508,7 +550,7 @@ function UsersPage() {
   return (
     <div className="grid gap-5 lg:grid-cols-2">
       <div className="glass-card">
-        <h3 className="text-lg font-semibold text-slate-100">Create User</h3>
+        <h3 className="text-lg font-semibold text-slate-100"><UserPlus className="icon-inline" aria-hidden="true" />Create User</h3>
         <form className="mt-4 space-y-3" onSubmit={onCreate}>
           <input className="field-input" placeholder="Full name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
           <input className="field-input" type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} required />
@@ -522,17 +564,45 @@ function UsersPage() {
       </div>
 
       <div className="glass-card">
-        <h3 className="text-lg font-semibold text-slate-100">Users</h3>
-        <div className="mt-4 space-y-2">
+        <h3 className="text-lg font-semibold text-slate-100"><BookUser className="icon-inline" aria-hidden="true" />Users</h3>
+        <div className="auth-switcher mt-4">
+          <button
+            type="button"
+            className={usersTab === 'user' ? 'auth-tab auth-tab-active' : 'auth-tab'}
+            onClick={() => setUsersTab('user')}
+          >
+            User
+          </button>
+          <button
+            type="button"
+            className={usersTab === 'admin' ? 'auth-tab auth-tab-active' : 'auth-tab'}
+            onClick={() => setUsersTab('admin')}
+          >
+            Admin
+          </button>
+        </div>
+
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200/10 bg-slate-950/40">
           {usersLoading && <p className="text-sm text-slate-300">Loading users...</p>}
-          {!usersLoading && users.length === 0 && <p className="text-sm text-slate-300">No users found.</p>}
-          {users.map((u) => (
-            <div key={u.id} className="rounded-lg border border-slate-200/10 bg-slate-950/40 p-3 text-sm text-slate-200">
-              <p className="font-semibold">{u.full_name}</p>
-              <p>{u.email}</p>
-              <p className="text-xs text-slate-400">#{u.id} | {u.role}</p>
-            </div>
-          ))}
+          {!usersLoading && filteredUsers.length === 0 && <p className="p-4 text-sm text-slate-300">No users found.</p>}
+          {!usersLoading && filteredUsers.length > 0 && (
+            <table className="w-full text-left text-sm text-slate-200">
+              <thead className="border-b border-slate-200/10 bg-slate-900/70 text-xs uppercase tracking-wide text-slate-400">
+                <tr>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Email</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredUsers.map((u) => (
+                  <tr key={u.id} className="border-b border-slate-200/10 last:border-b-0">
+                    <td className="px-4 py-3 font-medium text-slate-100">{u.full_name}</td>
+                    <td className="px-4 py-3 text-slate-300">{u.email}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
     </div>
@@ -551,7 +621,7 @@ function AnalyticsPage() {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-semibold text-slate-100">Analytics</h3>
+      <h3 className="text-lg font-semibold text-slate-100"><BarChart3 className="icon-inline" aria-hidden="true" />Analytics</h3>
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="metric-card"><p className="metric-label">Total Tasks</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.total_tasks ?? 0}</p></div>
         <div className="metric-card"><p className="metric-label">Completed</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.completed_tasks ?? 0}</p></div>

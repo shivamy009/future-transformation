@@ -75,12 +75,6 @@ def update_task_status(
             detail="You can only update your own assigned tasks",
         )
 
-    if task.status == "completed" and status_value == "pending":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Completed task cannot be moved back to pending",
-        )
-
     task.status = status_value
     db.commit()
     db.refresh(task)
