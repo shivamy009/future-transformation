@@ -6,9 +6,9 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles
 from app.models.user import User
-from app.schemas.task import TaskCreate, TaskListResponse, TaskOut, TaskStatusUpdate
+from app.schemas.task import TaskAdminUpdate, TaskCreate, TaskListResponse, TaskOut, TaskStatusUpdate
 from app.services.activity_service import log_activity
-from app.services.task_service import create_task, list_tasks, update_task_status
+from app.services.task_service import admin_update_task, create_task, list_tasks, update_task_status
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -72,5 +72,27 @@ def update_task_status_endpoint(
         "task_update",
         current_user.email,
         {"task_id": task.id, "status": payload.status},
+    )
+    return task
+
+
+@router.patch(
+    "/{task_id}/admin",
+    response_model=TaskOut,
+    dependencies=[Depends(require_roles(["admin"]))],
+)
+def admin_update_task_endpoint(
+    task_id: int,
+    payload: TaskAdminUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    task = admin_update_task(db=db, task_id=task_id, payload=payload)
+
+    log_activity(
+        db,
+        "task_update",
+        current_user.email,
+        {"task_id": task.id, "admin_edit": True},
     )
     return task

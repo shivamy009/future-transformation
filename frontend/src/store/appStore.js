@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import {
+  adminUpdateTaskApi,
   analyticsApi,
   createTaskApi,
   listTasksApi,
@@ -41,6 +42,14 @@ export const useAppStore = create((set, get) => ({
 
   updateTaskStatus: async (token, taskId, status) => {
     const updated = await updateTaskStatusApi(token, taskId, status)
+    set((state) => ({
+      tasks: state.tasks.map((task) => (task.id === updated.id ? updated : task)),
+    }))
+    return updated
+  },
+
+  adminUpdateTask: async (token, taskId, payload) => {
+    const updated = await adminUpdateTaskApi(token, taskId, payload)
     set((state) => ({
       tasks: state.tasks.map((task) => (task.id === updated.id ? updated : task)),
     }))

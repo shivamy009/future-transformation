@@ -14,6 +14,13 @@ class TaskStatusUpdate(BaseModel):
     status: str = Field(..., pattern="^(pending|completed)$")
 
 
+class TaskAdminUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=2, max_length=255)
+    description: Optional[str] = None
+    status: Optional[str] = Field(None, pattern="^(pending|completed)$")
+    assigned_to: Optional[int] = Field(None, gt=0)
+
+
 class TaskOut(BaseModel):
     id: int
     title: str

@@ -10,11 +10,13 @@ import {
   LayoutList,
   LogIn,
   LogOut,
+  Pencil,
   Search,
   ShieldCheck,
   Sparkles,
   RotateCcw,
   UserPlus,
+  X,
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
@@ -239,6 +241,7 @@ function TasksPage() {
   const fetchUsers = useAppStore((state) => state.fetchUsers)
   const createTask = useAppStore((state) => state.createTask)
   const updateTaskStatus = useAppStore((state) => state.updateTaskStatus)
+  const adminUpdateTask = useAppStore((state) => state.adminUpdateTask)
 
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDescription, setTaskDescription] = useState('')
@@ -246,6 +249,11 @@ function TasksPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [assignedFilter, setAssignedFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [editingTaskId, setEditingTaskId] = useState(null)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editStatus, setEditStatus] = useState('pending')
+  const [editAssignedTo, setEditAssignedTo] = useState('')
 
   const assignableUsers = useMemo(
     () => users.filter((u) => (u.role || '').toLowerCase() === 'user'),
@@ -296,6 +304,45 @@ function TasksPage() {
     try {
       await updateTaskStatus(token, taskId, nextStatus)
       toast.success(`Task marked ${nextStatus}`)
+    } catch (error) {
+      toast.error(error.message || 'Unable to update task')
+    }
+  }
+
+  const formatStatusLabel = (status) =>
+    status ? `${status.charAt(0).toUpperCase()}${status.slice(1)}` : 'Pending'
+
+  const onStartEditTask = (task) => {
+    setEditingTaskId(task.id)
+    setEditTitle(task.title || '')
+    setEditDescription(task.description || '')
+    setEditStatus(task.status || 'pending')
+    setEditAssignedTo(String(task.assigned_to || ''))
+  }
+
+  const onCancelEditTask = () => {
+    setEditingTaskId(null)
+    setEditTitle('')
+    setEditDescription('')
+    setEditStatus('pending')
+    setEditAssignedTo('')
+  }
+
+  const onSaveEditTask = async (event) => {
+    event.preventDefault()
+    if (!editingTaskId) {
+      return
+    }
+
+    try {
+      await adminUpdateTask(token, editingTaskId, {
+        title: editTitle,
+        description: editDescription || null,
+        status: editStatus,
+        assigned_to: Number(editAssignedTo),
+      })
+      toast.success('Task updated')
+      onCancelEditTask()
     } catch (error) {
       toast.error(error.message || 'Unable to update task')
     }
@@ -374,14 +421,66 @@ function TasksPage() {
                   <p className="text-sm text-slate-300">{task.description || 'No description'}</p>
                   <p className="mt-1 text-xs text-slate-400">Task #{task.id} | Assigned: {task.assigned_to}</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className={`status-chip ${task.status === 'completed' ? 'status-done' : 'status-pending'}`}>{task.status}</span>
-                  <button className="btn-secondary" onClick={() => onToggleStatus(task.id, task.status)}>
-                    {task.status === 'pending' ? <CheckCircle2 className="icon-inline" aria-hidden="true" /> : <RotateCcw className="icon-inline" aria-hidden="true" />}
-                    {task.status === 'pending' ? 'Mark Completed' : 'Mark Pending'}
+                <div className="task-actions">
+                  <span className={`status-chip ${task.status === 'completed' ? 'status-done' : 'status-pending'}`}>
+                    {formatStatusLabel(task.status)}
+                  </span>
+                  {role === 'admin' && (
+                    <button
+                      className="task-action-btn task-edit-btn"
+                      onClick={() => onStartEditTask(task)}
+                      aria-label="Edit task"
+                      title="Edit task"
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  )}
+                  <button
+                    className="task-action-btn task-toggle-btn"
+                    onClick={() => onToggleStatus(task.id, task.status)}
+                    aria-label={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
+                    title={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
+                  >
+                    {task.status === 'pending' ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : <RotateCcw className="h-4 w-4" aria-hidden="true" />}
                   </button>
                 </div>
               </div>
+
+              {role === 'admin' && editingTaskId === task.id && (
+                <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onSaveEditTask}>
+                  <label className="block md:col-span-2">
+                    <span className="field-label">Title</span>
+                    <input className="field-input" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required />
+                  </label>
+                  <label className="block md:col-span-2">
+                    <span className="field-label">Description</span>
+                    <textarea className="field-input min-h-24" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+                  </label>
+                  <label className="block">
+                    <span className="field-label">Status</span>
+                    <select className="field-input" value={editStatus} onChange={(event) => setEditStatus(event.target.value)}>
+                      <option value="pending">Pending</option>
+                      <option value="completed">Completed</option>
+                    </select>
+                  </label>
+                  <label className="block">
+                    <span className="field-label">Assign User</span>
+                    <select className="field-input" value={editAssignedTo} onChange={(event) => setEditAssignedTo(event.target.value)} required>
+                      <option value="">Select user</option>
+                      {assignableUsers.map((u) => (
+                        <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="md:col-span-2 flex items-center gap-2">
+                    <button className="btn-primary" type="submit">Save Changes</button>
+                    <button className="btn-secondary" type="button" onClick={onCancelEditTask}>
+                      <X className="icon-inline" aria-hidden="true" />
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           ))}
         </div>

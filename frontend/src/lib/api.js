@@ -127,6 +127,17 @@ export function updateTaskStatusApi(token, taskId, status) {
   })
 }
 
+export function adminUpdateTaskApi(token, taskId, payload) {
+  return apiRequest(`/tasks/${taskId}/admin`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
 export function uploadDocumentApi(token, { title, file }) {
   const form = new FormData()
   form.append('title', title)

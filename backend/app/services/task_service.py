@@ -4,7 +4,7 @@ from typing import Optional
 
 from app.models.task import Task
 from app.models.user import User
-from app.schemas.task import TaskCreate
+from app.schemas.task import TaskAdminUpdate, TaskCreate
 
 
 def create_task(db: Session, payload: TaskCreate, creator_id: int) -> Task:
@@ -76,6 +76,48 @@ def update_task_status(
         )
 
     task.status = status_value
+    db.commit()
+    db.refresh(task)
+    return task
+
+
+def admin_update_task(
+    db: Session,
+    task_id: int,
+    payload: TaskAdminUpdate,
+) -> Task:
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    if hasattr(payload, "model_dump"):
+        update_data = payload.model_dump(exclude_unset=True)
+    else:
+        update_data = payload.dict(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="At least one editable field must be provided",
+        )
+
+    if "assigned_to" in update_data:
+        assignee = db.query(User).filter(User.id == update_data["assigned_to"], User.is_active.is_(True)).first()
+        if not assignee:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Assigned user not found",
+            )
+        task.assigned_to = update_data["assigned_to"]
+
+    if "title" in update_data:
+        task.title = update_data["title"]
+
+    if "description" in update_data:
+        task.description = update_data["description"]
+
+    if "status" in update_data:
+        task.status = update_data["status"]
+
     db.commit()
     db.refresh(task)
     return task
