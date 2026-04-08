@@ -22,8 +22,8 @@ def semantic_search(
         db=db,
         query_text=payload.query,
         user_id=current_user.id,
-        top_k=payload.top_k,
-        include_answer=payload.include_answer,
+        top_k=5,
+        include_answer=True,
     )
 
     log_activity(

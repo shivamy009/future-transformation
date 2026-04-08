@@ -11,6 +11,7 @@ import {
   LogIn,
   LogOut,
   Pencil,
+  Plus,
   Search,
   ShieldCheck,
   Sparkles,
@@ -187,31 +188,36 @@ function AppShell({ children }) {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-      <header className="glass-card mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div>
-          <p className="eyebrow">{role?.toUpperCase()} Dashboard</p>
-          <h2 className="mt-1 text-2xl font-semibold text-slate-100">Welcome, {user?.full_name}</h2>
-          <p className="text-sm text-slate-300">{user?.email}</p>
-        </div>
-        <button className="btn-secondary" onClick={onLogout}><LogOut className="icon-inline" aria-hidden="true" />Logout</button>
-      </header>
+      <div className="grid gap-4 lg:gap-5 lg:grid-cols-[260px_1fr] lg:items-stretch">
+        <aside className="glass-card sidebar-card flex h-full flex-col lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-300">Future Transformation</p>
+            <p className="eyebrow">{role?.toUpperCase()} Dashboard</p>
+            <h2 className="mt-1 text-xl font-semibold text-slate-100">{user?.full_name}</h2>
+            <p className="text-sm text-slate-300 break-all">{user?.email}</p>
+          </div>
 
-      <nav className="glass-card mb-5 overflow-x-auto p-2">
-        <div className="flex min-w-max gap-2">
-          {links.map((link) => {
-            const active = location.pathname === link.to
-            const Icon = link.icon
-            return (
-              <Link key={link.to} to={link.to} className={active ? 'nav-pill nav-pill-active' : 'nav-pill'}>
-                <Icon className="icon-inline" aria-hidden="true" />
-                {link.label}
-              </Link>
-            )
-          })}
-        </div>
-      </nav>
+          <nav className="sidebar-nav mt-5">
+            {links.map((link) => {
+              const active = location.pathname === link.to
+              const Icon = link.icon
+              return (
+                <Link key={link.to} to={link.to} className={active ? 'nav-pill sidebar-link nav-pill-active w-full' : 'nav-pill sidebar-link w-full'}>
+                  <Icon className="icon-inline" aria-hidden="true" />
+                  {link.label}
+                </Link>
+              )
+            })}
+          </nav>
 
-      <section>{children}</section>
+          <button className="btn-secondary sidebar-logout-btn mt-auto w-full" onClick={onLogout}>
+            <LogOut className="icon-inline" aria-hidden="true" />
+            Logout
+          </button>
+        </aside>
+
+        <section>{children}</section>
+      </div>
     </div>
   )
 }
@@ -249,6 +255,7 @@ function TasksPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [assignedFilter, setAssignedFilter] = useState('')
   const [page, setPage] = useState(1)
+  const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -287,6 +294,7 @@ function TasksPage() {
       setTaskTitle('')
       setTaskDescription('')
       setTaskAssignee('')
+      setShowCreateTaskModal(false)
       setPage(1)
       await fetchTasks(token, {
         page: 1,
@@ -297,6 +305,13 @@ function TasksPage() {
     } catch (error) {
       toast.error(error.message || 'Unable to create task')
     }
+  }
+
+  const onCloseCreateTaskModal = () => {
+    setShowCreateTaskModal(false)
+    setTaskTitle('')
+    setTaskDescription('')
+    setTaskAssignee('')
   }
 
   const onToggleStatus = async (taskId, currentStatus) => {
@@ -350,33 +365,17 @@ function TasksPage() {
 
   return (
     <div className="space-y-5">
-      {role === 'admin' && (
-        <div className="glass-card">
-          <h3 className="text-lg font-semibold text-slate-100"><LayoutList className="icon-inline" aria-hidden="true" />Create Task</h3>
-          <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateTask}>
-            <label className="block md:col-span-2">
-              <span className="field-label">Title</span>
-              <input className="field-input" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} required />
-            </label>
-            <label className="block md:col-span-2">
-              <span className="field-label">Description</span>
-              <textarea className="field-input min-h-24" value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} />
-            </label>
-            <label className="block md:col-span-2">
-              <span className="field-label">Assign User</span>
-              <select className="field-input" value={taskAssignee} onChange={(event) => setTaskAssignee(event.target.value)} required>
-                <option value="">{usersLoading ? 'Loading users...' : 'Select user'}</option>
-                {assignableUsers.map((u) => (
-                  <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
-                ))}
-              </select>
-            </label>
-            <button className="btn-primary md:col-span-2" type="submit">Create Task</button>
-          </form>
-        </div>
-      )}
-
       <div className="glass-card">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-lg font-semibold text-slate-100"><LayoutList className="icon-inline" aria-hidden="true" />Tasks</h3>
+          {role === 'admin' && (
+            <button className="btn-primary" type="button" onClick={() => setShowCreateTaskModal(true)}>
+              <Plus className="icon-inline" aria-hidden="true" />
+              Create Task
+            </button>
+          )}
+        </div>
+
         <div className="grid gap-3 md:grid-cols-4">
           <select className="field-input" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1) }}>
             <option value="">All Status</option>
@@ -494,6 +493,43 @@ function TasksPage() {
           </div>
         </div>
       </div>
+
+      {role === 'admin' && showCreateTaskModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Create Task">
+          <div className="modal-panel">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-slate-100">Create Task</h3>
+              <button className="task-action-btn task-edit-btn" type="button" onClick={onCloseCreateTaskModal} aria-label="Close create task modal">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateTask}>
+              <label className="block md:col-span-2">
+                <span className="field-label">Title</span>
+                <input className="field-input" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} required />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="field-label">Description</span>
+                <textarea className="field-input min-h-24" value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} />
+              </label>
+              <label className="block md:col-span-2">
+                <span className="field-label">Assign User</span>
+                <select className="field-input" value={taskAssignee} onChange={(event) => setTaskAssignee(event.target.value)} required>
+                  <option value="">{usersLoading ? 'Loading users...' : 'Select user'}</option>
+                  {assignableUsers.map((u) => (
+                    <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                  ))}
+                </select>
+              </label>
+              <div className="md:col-span-2 flex items-center gap-2">
+                <button className="btn-primary" type="submit">Create Task</button>
+                <button className="btn-secondary" type="button" onClick={onCloseCreateTaskModal}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -556,8 +592,6 @@ function SearchPage() {
   const fetchAnalytics = useAppStore((state) => state.fetchAnalytics)
 
   const [query, setQuery] = useState('')
-  const [topK, setTopK] = useState(5)
-  const [includeAnswer, setIncludeAnswer] = useState(true)
 
   const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
@@ -591,7 +625,7 @@ function SearchPage() {
   const onSubmit = async (event) => {
     event.preventDefault()
     try {
-      const data = await runSearch(token, { query, top_k: Number(topK), include_answer: includeAnswer })
+      const data = await runSearch(token, { query, top_k: 5, include_answer: true })
       toast.success(`Found ${data.results.length} matches`)
       if (role === 'admin') await fetchAnalytics(token)
     } catch (error) {
@@ -601,24 +635,13 @@ function SearchPage() {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-semibold text-slate-100"><BrainCircuit className="icon-inline" aria-hidden="true" />Semantic Search + LLM</h3>
-      <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={onSubmit}>
-        <label className="block md:col-span-2">
+      <h3 className="text-lg font-semibold text-slate-100"><BrainCircuit className="icon-inline" aria-hidden="true" />Semantic Search + LLM (K=5)</h3>
+      <form className="mt-4 grid gap-3 md:grid-cols-1" onSubmit={onSubmit}>
+        <label className="block">
           <span className="field-label">Query</span>
           <input className="field-input" value={query} onChange={(event) => setQuery(event.target.value)} required />
         </label>
-        <label className="block">
-          <span className="field-label">Top K</span>
-          <input className="field-input" type="number" min="1" max="20" value={topK} onChange={(event) => setTopK(event.target.value)} />
-        </label>
-        <label className="block">
-          <span className="field-label">LLM Answer</span>
-          <select className="field-input" value={includeAnswer ? 'yes' : 'no'} onChange={(event) => setIncludeAnswer(event.target.value === 'yes')}>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </label>
-        <button className="btn-primary md:col-span-4" disabled={searchLoading} type="submit">{searchLoading ? 'Searching...' : 'Search'}</button>
+        <button className="btn-primary" disabled={searchLoading} type="submit">{searchLoading ? 'Searching...' : 'Search'}</button>
       </form>
 
       {latestSearch && (
