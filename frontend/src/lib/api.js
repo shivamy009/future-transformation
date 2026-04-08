@@ -1,5 +1,11 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1'
 
+function authHeaders(token) {
+  return {
+    Authorization: `Bearer ${token}`,
+  }
+}
+
 async function parseError(response) {
   try {
     const data = await response.json()
@@ -46,9 +52,7 @@ export function loginApi(email, password) {
 export function meApi(token) {
   return apiRequest('/auth/me', {
     method: 'GET',
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
+    headers: authHeaders(token),
   })
 }
 
@@ -57,7 +61,7 @@ export function registerUserApi(token, payload) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      ...authHeaders(token),
     },
     body: JSON.stringify(payload),
   })
@@ -66,8 +70,79 @@ export function registerUserApi(token, payload) {
 export function adminCheckApi(token) {
   return apiRequest('/auth/admin-check', {
     method: 'GET',
+    headers: authHeaders(token),
+  })
+}
+
+export function listUsersApi(token) {
+  return apiRequest('/auth/users', {
+    method: 'GET',
+    headers: authHeaders(token),
+  })
+}
+
+export function createTaskApi(token, payload) {
+  return apiRequest('/tasks', {
+    method: 'POST',
     headers: {
-      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      ...authHeaders(token),
     },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function listTasksApi(token, filters = {}) {
+  const params = new URLSearchParams()
+  if (filters.status) params.append('status', filters.status)
+  if (filters.assigned_to) params.append('assigned_to', String(filters.assigned_to))
+  if (filters.page) params.append('page', String(filters.page))
+  if (filters.page_size) params.append('page_size', String(filters.page_size))
+
+  const query = params.toString() ? `?${params.toString()}` : ''
+  return apiRequest(`/tasks${query}`, {
+    method: 'GET',
+    headers: authHeaders(token),
+  })
+}
+
+export function updateTaskStatusApi(token, taskId, status) {
+  return apiRequest(`/tasks/${taskId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(token),
+    },
+    body: JSON.stringify({ status }),
+  })
+}
+
+export function uploadDocumentApi(token, { title, file }) {
+  const form = new FormData()
+  form.append('title', title)
+  form.append('file', file)
+
+  return apiRequest('/documents', {
+    method: 'POST',
+    headers: authHeaders(token),
+    body: form,
+  })
+}
+
+export function searchApi(token, payload) {
+  return apiRequest('/search', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders(token),
+    },
+    body: JSON.stringify(payload),
+  })
+}
+
+export function analyticsApi(token) {
+  return apiRequest('/analytics', {
+    method: 'GET',
+    headers: authHeaders(token),
   })
 }

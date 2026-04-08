@@ -54,3 +54,19 @@ def me(current_user: User = Depends(get_current_user)):
 @router.get("/admin-check", dependencies=[Depends(require_roles(["admin"]))])
 def admin_check(current_user: User = Depends(get_current_user)):
     return {"message": f"Admin access granted for {current_user.email}"}
+
+
+@router.get("/users", response_model=list[UserOut], dependencies=[Depends(require_roles(["admin"]))])
+def list_users(db: Session = Depends(get_db)):
+    users = db.query(User).filter(User.is_active.is_(True)).order_by(User.id.asc()).all()
+    return [
+        UserOut(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            role=user.role.name,
+            is_active=user.is_active,
+            created_at=user.created_at,
+        )
+        for user in users
+    ]

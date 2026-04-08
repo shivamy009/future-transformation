@@ -1,197 +1,541 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { toast } from 'react-hot-toast'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 
+import { useAppStore } from './store/appStore'
 import { useAuthStore } from './store/authStore'
 
-function LoginPanel() {
+function LoginPage() {
   const [email, setEmail] = useState('admin@example.com')
   const [password, setPassword] = useState('ChangeThisAdminPassword123')
 
   const loading = useAuthStore((state) => state.loading)
   const login = useAuthStore((state) => state.login)
+  const token = useAuthStore((state) => state.token)
+
+  const navigate = useNavigate()
+
+  useEffect(() => {
+    if (token) {
+      navigate('/tasks', { replace: true })
+    }
+  }, [token, navigate])
 
   const onSubmit = async (event) => {
     event.preventDefault()
     try {
       await login(email, password)
       toast.success('Login successful')
+      navigate('/tasks', { replace: true })
     } catch (error) {
       toast.error(error.message || 'Login failed')
     }
   }
 
   return (
-    <div className="glass-card w-full max-w-md">
-      <p className="eyebrow">Future Transformation</p>
-      <h1 className="mt-2 text-3xl font-semibold text-slate-100">Auth Console</h1>
-      <p className="mt-2 text-sm text-slate-300">
-        Sign in with your backend credentials to access role-based controls.
-      </p>
+    <section className="mx-auto grid min-h-screen w-full max-w-6xl place-items-center px-4 py-8">
+      <div className="glass-card w-full max-w-md">
+        <p className="eyebrow">Future Transformation</p>
+        <h1 className="mt-2 text-3xl font-semibold text-slate-100">AI Work Console</h1>
+        <p className="mt-2 text-sm text-slate-300">Sign in to manage tasks, documents, and search intelligence.</p>
 
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-        <label className="block">
-          <span className="field-label">Email</span>
+        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+          <label className="block">
+            <span className="field-label">Email</span>
+            <input className="field-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          </label>
+
+          <label className="block">
+            <span className="field-label">Password</span>
+            <input className="field-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          </label>
+
+          <button className="btn-primary w-full" type="submit" disabled={loading}>
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+        </form>
+      </div>
+    </section>
+  )
+}
+
+function AppShell({ children }) {
+  const user = useAuthStore((state) => state.user)
+  const role = useAuthStore((state) => state.role)
+  const logout = useAuthStore((state) => state.logout)
+  const resetAppState = useAppStore((state) => state.resetAppState)
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const links = useMemo(() => {
+    const base = [
+      { to: '/tasks', label: 'Tasks' },
+      { to: '/documents', label: 'Documents' },
+      { to: '/search', label: 'Search' },
+    ]
+    if (role === 'admin') {
+      base.push({ to: '/users', label: 'Users' })
+      base.push({ to: '/analytics', label: 'Analytics' })
+    }
+    return base
+  }, [role])
+
+  const onLogout = () => {
+    resetAppState()
+    logout()
+    navigate('/login', { replace: true })
+  }
+
+  return (
+    <div className="mx-auto min-h-screen w-full max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+      <header className="glass-card mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <p className="eyebrow">{role?.toUpperCase()} Dashboard</p>
+          <h2 className="mt-1 text-2xl font-semibold text-slate-100">Welcome, {user?.full_name}</h2>
+          <p className="text-sm text-slate-300">{user?.email}</p>
+        </div>
+        <button className="btn-secondary" onClick={onLogout}>Logout</button>
+      </header>
+
+      <nav className="glass-card mb-5 overflow-x-auto p-2">
+        <div className="flex min-w-max gap-2">
+          {links.map((link) => {
+            const active = location.pathname === link.to
+            return (
+              <Link key={link.to} to={link.to} className={active ? 'nav-pill nav-pill-active' : 'nav-pill'}>
+                {link.label}
+              </Link>
+            )
+          })}
+        </div>
+      </nav>
+
+      <section>{children}</section>
+    </div>
+  )
+}
+
+function ProtectedRoute({ children }) {
+  const token = useAuthStore((state) => state.token)
+  return token ? children : <Navigate to="/login" replace />
+}
+
+function AdminRoute({ children }) {
+  const role = useAuthStore((state) => state.role)
+  if (role !== 'admin') return <Navigate to="/tasks" replace />
+  return children
+}
+
+function TasksPage() {
+  const token = useAuthStore((state) => state.token)
+  const role = useAuthStore((state) => state.role)
+
+  const tasks = useAppStore((state) => state.tasks)
+  const tasksMeta = useAppStore((state) => state.tasksMeta)
+  const tasksLoading = useAppStore((state) => state.tasksLoading)
+  const users = useAppStore((state) => state.users)
+  const usersLoading = useAppStore((state) => state.usersLoading)
+
+  const fetchTasks = useAppStore((state) => state.fetchTasks)
+  const fetchUsers = useAppStore((state) => state.fetchUsers)
+  const createTask = useAppStore((state) => state.createTask)
+  const markTaskCompleted = useAppStore((state) => state.markTaskCompleted)
+
+  const [taskTitle, setTaskTitle] = useState('')
+  const [taskDescription, setTaskDescription] = useState('')
+  const [taskAssignee, setTaskAssignee] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [assignedFilter, setAssignedFilter] = useState('')
+  const [page, setPage] = useState(1)
+
+  useEffect(() => {
+    fetchTasks(token, {
+      page,
+      page_size: 10,
+      status: statusFilter || undefined,
+      assigned_to: assignedFilter || undefined,
+    }).catch((error) => toast.error(error.message || 'Unable to fetch tasks'))
+  }, [fetchTasks, token, page, statusFilter, assignedFilter])
+
+  useEffect(() => {
+    if (role === 'admin') {
+      fetchUsers(token).catch((error) => toast.error(error.message || 'Unable to fetch users'))
+    }
+  }, [fetchUsers, role, token])
+
+  const onCreateTask = async (event) => {
+    event.preventDefault()
+    try {
+      await createTask(token, {
+        title: taskTitle,
+        description: taskDescription || null,
+        assigned_to: Number(taskAssignee),
+      })
+      toast.success('Task created')
+      setTaskTitle('')
+      setTaskDescription('')
+      setTaskAssignee('')
+      setPage(1)
+      await fetchTasks(token, { page: 1, page_size: 10, status: statusFilter || undefined, assigned_to: assignedFilter || undefined })
+    } catch (error) {
+      toast.error(error.message || 'Unable to create task')
+    }
+  }
+
+  const onMarkCompleted = async (taskId) => {
+    try {
+      await markTaskCompleted(token, taskId)
+      toast.success('Task marked completed')
+    } catch (error) {
+      toast.error(error.message || 'Unable to update task')
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      {role === 'admin' && (
+        <div className="glass-card">
+          <h3 className="text-lg font-semibold text-slate-100">Create Task</h3>
+          <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateTask}>
+            <label className="block md:col-span-2">
+              <span className="field-label">Title</span>
+              <input className="field-input" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} required />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="field-label">Description</span>
+              <textarea className="field-input min-h-24" value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} />
+            </label>
+            <label className="block md:col-span-2">
+              <span className="field-label">Assign User</span>
+              <select className="field-input" value={taskAssignee} onChange={(event) => setTaskAssignee(event.target.value)} required>
+                <option value="">{usersLoading ? 'Loading users...' : 'Select user'}</option>
+                {users.map((u) => (
+                  <option key={u.id} value={u.id}>{u.full_name} ({u.email})</option>
+                ))}
+              </select>
+            </label>
+            <button className="btn-primary md:col-span-2" type="submit">Create Task</button>
+          </form>
+        </div>
+      )}
+
+      <div className="glass-card">
+        <div className="grid gap-3 md:grid-cols-4">
+          <select className="field-input" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(1) }}>
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
           <input
             className="field-input"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
+            type="number"
+            min="1"
+            placeholder="assigned_to"
+            value={assignedFilter}
+            onChange={(event) => { setAssignedFilter(event.target.value); setPage(1) }}
           />
-        </label>
+          <button className="btn-secondary md:col-span-2" onClick={() => fetchTasks(token, { page, page_size: 10, status: statusFilter || undefined, assigned_to: assignedFilter || undefined })}>
+            Refresh
+          </button>
+        </div>
 
+        <div className="mt-4 space-y-3">
+          {tasksLoading && <p className="text-sm text-slate-300">Loading tasks...</p>}
+          {!tasksLoading && tasks.length === 0 && <p className="text-sm text-slate-300">No tasks found.</p>}
+          {tasks.map((task) => (
+            <div key={task.id} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="font-semibold text-slate-100">{task.title}</p>
+                  <p className="text-sm text-slate-300">{task.description || 'No description'}</p>
+                  <p className="mt-1 text-xs text-slate-400">Task #{task.id} | Assigned: {task.assigned_to}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className={`status-chip ${task.status === 'completed' ? 'status-done' : 'status-pending'}`}>{task.status}</span>
+                  {task.status === 'pending' && <button className="btn-secondary" onClick={() => onMarkCompleted(task.id)}>Mark Completed</button>}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-slate-400">Total: {tasksMeta.total || 0}</p>
+          <div className="flex items-center gap-2">
+            <button className="btn-secondary" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>Prev</button>
+            <span className="text-sm text-slate-300">Page {page}</span>
+            <button className="btn-secondary" onClick={() => setPage((prev) => prev + 1)} disabled={page * 10 >= (tasksMeta.total || 0)}>Next</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DocumentsPage() {
+  const token = useAuthStore((state) => state.token)
+  const uploadLoading = useAppStore((state) => state.uploadLoading)
+  const uploadDocument = useAppStore((state) => state.uploadDocument)
+
+  const [docTitle, setDocTitle] = useState('')
+  const [docFile, setDocFile] = useState(null)
+
+  const onSubmit = async (event) => {
+    event.preventDefault()
+    if (!docFile) {
+      toast.error('Please choose a .txt file')
+      return
+    }
+    try {
+      const data = await uploadDocument(token, { title: docTitle, file: docFile })
+      toast.success(`Indexed ${data.chunks_indexed} chunks`)
+      setDocTitle('')
+      setDocFile(null)
+      event.target.reset()
+    } catch (error) {
+      toast.error(error.message || 'Upload failed')
+    }
+  }
+
+  return (
+    <div className="glass-card">
+      <h3 className="text-lg font-semibold text-slate-100">Upload Document</h3>
+      <form className="mt-4 space-y-3" onSubmit={onSubmit}>
         <label className="block">
-          <span className="field-label">Password</span>
-          <input
-            className="field-input"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+          <span className="field-label">Title</span>
+          <input className="field-input" value={docTitle} onChange={(event) => setDocTitle(event.target.value)} required />
         </label>
-
-        <button className="btn-primary w-full" type="submit" disabled={loading}>
-          {loading ? 'Signing in...' : 'Sign In'}
-        </button>
+        <label className="block">
+          <span className="field-label">TXT File</span>
+          <input className="field-input" type="file" accept=".txt,text/plain" onChange={(event) => setDocFile(event.target.files?.[0] || null)} required />
+        </label>
+        <button className="btn-primary w-full" disabled={uploadLoading} type="submit">{uploadLoading ? 'Uploading...' : 'Upload & Index'}</button>
       </form>
     </div>
   )
 }
 
-function RegisterPanel() {
+function SearchPage() {
+  const token = useAuthStore((state) => state.token)
+  const role = useAuthStore((state) => state.role)
+  const searchLoading = useAppStore((state) => state.searchLoading)
+  const latestSearch = useAppStore((state) => state.latestSearch)
+  const runSearch = useAppStore((state) => state.runSearch)
+  const fetchAnalytics = useAppStore((state) => state.fetchAnalytics)
+
+  const [query, setQuery] = useState('')
+  const [topK, setTopK] = useState(5)
+  const [includeAnswer, setIncludeAnswer] = useState(true)
+
+  const onSubmit = async (event) => {
+    event.preventDefault()
+    try {
+      const data = await runSearch(token, { query, top_k: Number(topK), include_answer: includeAnswer })
+      toast.success(`Found ${data.results.length} matches`)
+      if (role === 'admin') await fetchAnalytics(token)
+    } catch (error) {
+      toast.error(error.message || 'Search failed')
+    }
+  }
+
+  return (
+    <div className="glass-card">
+      <h3 className="text-lg font-semibold text-slate-100">Semantic Search + LLM</h3>
+      <form className="mt-4 grid gap-3 md:grid-cols-4" onSubmit={onSubmit}>
+        <label className="block md:col-span-2">
+          <span className="field-label">Query</span>
+          <input className="field-input" value={query} onChange={(event) => setQuery(event.target.value)} required />
+        </label>
+        <label className="block">
+          <span className="field-label">Top K</span>
+          <input className="field-input" type="number" min="1" max="20" value={topK} onChange={(event) => setTopK(event.target.value)} />
+        </label>
+        <label className="block">
+          <span className="field-label">LLM Answer</span>
+          <select className="field-input" value={includeAnswer ? 'yes' : 'no'} onChange={(event) => setIncludeAnswer(event.target.value === 'yes')}>
+            <option value="yes">Yes</option>
+            <option value="no">No</option>
+          </select>
+        </label>
+        <button className="btn-primary md:col-span-4" disabled={searchLoading} type="submit">{searchLoading ? 'Searching...' : 'Search'}</button>
+      </form>
+
+      {latestSearch && (
+        <div className="mt-5 space-y-4">
+          {latestSearch.answer && (
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">LLM Answer</p>
+              <p className="mt-1 text-sm text-slate-100">{latestSearch.answer}</p>
+            </div>
+          )}
+          <div className="grid gap-3 md:grid-cols-2">
+            {latestSearch.results.map((result, idx) => (
+              <div key={`${result.document_id}-${idx}`} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-4">
+                <p className="text-xs text-cyan-300">Doc #{result.document_id} | Score: {result.score.toFixed(4)}</p>
+                <p className="mt-2 text-sm text-slate-200">{result.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function UsersPage() {
+  const token = useAuthStore((state) => state.token)
+  const users = useAppStore((state) => state.users)
+  const usersLoading = useAppStore((state) => state.usersLoading)
+  const fetchUsers = useAppStore((state) => state.fetchUsers)
+
+  const createUser = useAuthStore((state) => state.createUser)
+
   const [email, setEmail] = useState('')
   const [fullName, setFullName] = useState('')
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('user')
 
-  const createUser = useAuthStore((state) => state.createUser)
+  useEffect(() => {
+    fetchUsers(token).catch((error) => toast.error(error.message || 'Unable to fetch users'))
+  }, [fetchUsers, token])
 
   const onCreate = async (event) => {
     event.preventDefault()
     try {
       await createUser({ email, full_name: fullName, password, role })
-      toast.success('User created successfully')
+      toast.success('User created')
       setEmail('')
       setFullName('')
       setPassword('')
       setRole('user')
+      await fetchUsers(token)
     } catch (error) {
       toast.error(error.message || 'Unable to create user')
     }
   }
 
   return (
-    <div className="glass-card">
-      <h2 className="text-xl font-semibold text-slate-100">Create User (Admin)</h2>
-      <p className="mt-1 text-sm text-slate-300">Admin can create both user and admin accounts.</p>
-
-      <form className="mt-5 grid gap-4 md:grid-cols-2" onSubmit={onCreate}>
-        <label className="block md:col-span-2">
-          <span className="field-label">Full Name</span>
-          <input
-            className="field-input"
-            value={fullName}
-            onChange={(event) => setFullName(event.target.value)}
-            required
-          />
-        </label>
-
-        <label className="block md:col-span-2">
-          <span className="field-label">Email</span>
-          <input
-            className="field-input"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            required
-          />
-        </label>
-
-        <label className="block">
-          <span className="field-label">Password</span>
-          <input
-            className="field-input"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
-        </label>
-
-        <label className="block">
-          <span className="field-label">Role</span>
+    <div className="grid gap-5 lg:grid-cols-2">
+      <div className="glass-card">
+        <h3 className="text-lg font-semibold text-slate-100">Create User</h3>
+        <form className="mt-4 space-y-3" onSubmit={onCreate}>
+          <input className="field-input" placeholder="Full name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+          <input className="field-input" type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <input className="field-input" type="password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} required />
           <select className="field-input" value={role} onChange={(event) => setRole(event.target.value)}>
             <option value="user">User</option>
             <option value="admin">Admin</option>
           </select>
-        </label>
+          <button className="btn-primary w-full" type="submit">Create Account</button>
+        </form>
+      </div>
 
-        <button className="btn-primary md:col-span-2" type="submit">
-          Create Account
-        </button>
-      </form>
+      <div className="glass-card">
+        <h3 className="text-lg font-semibold text-slate-100">Users</h3>
+        <div className="mt-4 space-y-2">
+          {usersLoading && <p className="text-sm text-slate-300">Loading users...</p>}
+          {!usersLoading && users.length === 0 && <p className="text-sm text-slate-300">No users found.</p>}
+          {users.map((u) => (
+            <div key={u.id} className="rounded-lg border border-slate-200/10 bg-slate-950/40 p-3 text-sm text-slate-200">
+              <p className="font-semibold">{u.full_name}</p>
+              <p>{u.email}</p>
+              <p className="text-xs text-slate-400">#{u.id} | {u.role}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }
 
-function Dashboard() {
-  const user = useAuthStore((state) => state.user)
-  const role = useAuthStore((state) => state.role)
-  const logout = useAuthStore((state) => state.logout)
-  const checkAdminAccess = useAuthStore((state) => state.checkAdminAccess)
+function AnalyticsPage() {
+  const token = useAuthStore((state) => state.token)
+  const analytics = useAppStore((state) => state.analytics)
+  const analyticsLoading = useAppStore((state) => state.analyticsLoading)
+  const fetchAnalytics = useAppStore((state) => state.fetchAnalytics)
 
-  const onAdminCheck = async () => {
-    try {
-      const data = await checkAdminAccess()
-      toast.success(data.message)
-    } catch (error) {
-      toast.error(error.message || 'Admin check failed')
-    }
-  }
+  useEffect(() => {
+    fetchAnalytics(token).catch((error) => toast.error(error.message || 'Unable to fetch analytics'))
+  }, [fetchAnalytics, token])
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-5 px-4 py-8 sm:px-6 lg:px-8">
-      <header className="glass-card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="eyebrow">Authenticated</p>
-          <h2 className="mt-1 text-2xl font-semibold text-slate-100">Welcome, {user?.full_name}</h2>
-          <p className="mt-1 text-sm text-slate-300">
-            Email: <span className="text-slate-100">{user?.email}</span>
-          </p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <span className="role-chip">Role: {role}</span>
-          <button className="btn-secondary" onClick={logout}>
-            Logout
-          </button>
-        </div>
-      </header>
-
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="glass-card">
-          <h3 className="text-lg font-semibold text-slate-100">RBAC Access Test</h3>
-          <p className="mt-2 text-sm text-slate-300">
-            This calls a backend endpoint protected by admin role middleware.
-          </p>
-          <button className="btn-primary mt-5" onClick={onAdminCheck}>
-            Verify Admin Access
-          </button>
-        </div>
-
-        {role === 'admin' ? (
-          <RegisterPanel />
-        ) : (
-          <div className="glass-card">
-            <h3 className="text-lg font-semibold text-slate-100">Admin Area</h3>
-            <p className="mt-2 text-sm text-slate-300">
-              You are logged in as user. Admin-only actions are hidden by frontend RBAC.
-            </p>
-          </div>
-        )}
+    <div className="glass-card">
+      <h3 className="text-lg font-semibold text-slate-100">Analytics</h3>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="metric-card"><p className="metric-label">Total Tasks</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.total_tasks ?? 0}</p></div>
+        <div className="metric-card"><p className="metric-label">Completed</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.completed_tasks ?? 0}</p></div>
+        <div className="metric-card"><p className="metric-label">Pending</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.pending_tasks ?? 0}</p></div>
+        <div className="metric-card"><p className="metric-label">Searches</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.total_searches_performed ?? 0}</p></div>
       </div>
     </div>
+  )
+}
+
+function AppRoutes() {
+  const token = useAuthStore((state) => state.token)
+
+  return (
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/" element={<Navigate to={token ? '/tasks' : '/login'} replace />} />
+
+      <Route
+        path="/tasks"
+        element={(
+          <ProtectedRoute>
+            <AppShell>
+              <TasksPage />
+            </AppShell>
+          </ProtectedRoute>
+        )}
+      />
+      <Route
+        path="/documents"
+        element={(
+          <ProtectedRoute>
+            <AppShell>
+              <DocumentsPage />
+            </AppShell>
+          </ProtectedRoute>
+        )}
+      />
+      <Route
+        path="/search"
+        element={(
+          <ProtectedRoute>
+            <AppShell>
+              <SearchPage />
+            </AppShell>
+          </ProtectedRoute>
+        )}
+      />
+      <Route
+        path="/users"
+        element={(
+          <ProtectedRoute>
+            <AdminRoute>
+              <AppShell>
+                <UsersPage />
+              </AppShell>
+            </AdminRoute>
+          </ProtectedRoute>
+        )}
+      />
+      <Route
+        path="/analytics"
+        element={(
+          <ProtectedRoute>
+            <AdminRoute>
+              <AppShell>
+                <AnalyticsPage />
+              </AppShell>
+            </AdminRoute>
+          </ProtectedRoute>
+        )}
+      />
+
+      <Route path="*" element={<Navigate to={token ? '/tasks' : '/login'} replace />} />
+    </Routes>
   )
 }
 
@@ -216,17 +560,7 @@ function App() {
     )
   }
 
-  return (
-    <main className="min-h-screen">
-      {!token ? (
-        <section className="mx-auto grid min-h-screen w-full max-w-6xl place-items-center px-4 py-8">
-          <LoginPanel />
-        </section>
-      ) : (
-        <Dashboard />
-      )}
-    </main>
-  )
+  return <AppRoutes />
 }
 
 export default App

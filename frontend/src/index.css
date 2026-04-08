@@ -42,6 +42,10 @@ body {
 	@apply border-cyan-300/60 ring-2 ring-cyan-400/30;
 }
 
+textarea.field-input {
+	@apply resize-y;
+}
+
 .btn-primary {
 	@apply rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2.5 font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60;
 }
@@ -52,6 +56,38 @@ body {
 
 .role-chip {
 	@apply inline-flex items-center rounded-full border border-emerald-300/30 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-200;
+}
+
+.metric-card {
+	@apply rounded-xl border border-slate-200/10 bg-slate-950/40 p-4;
+}
+
+.metric-label {
+	@apply text-xs font-semibold uppercase tracking-wide text-slate-400;
+}
+
+.metric-value {
+	@apply mt-1 text-2xl font-semibold text-slate-100;
+}
+
+.status-chip {
+	@apply inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wide;
+}
+
+.status-pending {
+	@apply border-amber-300/30 bg-amber-300/10 text-amber-200;
+}
+
+.status-done {
+	@apply border-emerald-300/30 bg-emerald-300/10 text-emerald-200;
+}
+
+.nav-pill {
+	@apply rounded-lg border border-slate-200/10 px-4 py-2 text-sm font-semibold text-slate-300 transition hover:bg-slate-800/70;
+}
+
+.nav-pill-active {
+	@apply border-cyan-300/40 bg-cyan-300/10 text-cyan-200;
 }
 
 h1,
