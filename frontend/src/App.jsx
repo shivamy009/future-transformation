@@ -80,8 +80,8 @@ function AnalyticsSkeleton() {
 function LoginPage() {
   const [mode, setMode] = useState('login')
   const [fullName, setFullName] = useState('')
-  const [email, setEmail] = useState('admin@example.com')
-  const [password, setPassword] = useState('ChangeThisAdminPassword123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
 
   const loading = useAuthStore((state) => state.loading)
   const login = useAuthStore((state) => state.login)
