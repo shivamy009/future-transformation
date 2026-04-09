@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from fastapi import HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 import json
 from sqlalchemy.orm import Session
@@ -121,3 +122,33 @@ def list_user_activities(user_id: int, db: Session = Depends(get_db)):
         )
 
     return UserActivityResponse(user_id=user.id, user_email=user.email, activities=activities)
+
+
+@router.delete(
+    "/users/{user_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["admin"]))],
+)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if current_user.id == user_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You cannot delete your own account")
+
+    user = db.query(User).filter(User.id == user_id, User.is_active.is_(True)).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    user.is_active = False
+    db.commit()
+
+    log_activity(
+        db,
+        "user_delete",
+        current_user.email,
+        {"deleted_user_id": user.id, "deleted_user_email": user.email},
+    )
+
+    return None

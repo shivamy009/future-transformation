@@ -4,6 +4,7 @@ import {
   adminUpdateTaskApi,
   analyticsApi,
   createTaskApi,
+  deleteUserApi,
   listTasksApi,
   userActivitiesApi,
   listUsersApi,
@@ -117,6 +118,15 @@ export const useAppStore = create((set, get) => ({
       set({ userActivitiesLoading: false })
       throw error
     }
+  },
+
+  deleteUser: async (token, userId) => {
+    await deleteUserApi(token, userId)
+    set((state) => ({
+      users: state.users.filter((user) => user.id !== userId),
+      userActivities: [],
+    }))
+    return true
   },
 
   resetAppState: () =>

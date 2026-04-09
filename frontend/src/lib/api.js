@@ -98,6 +98,13 @@ export function userActivitiesApi(token, userId) {
   })
 }
 
+export function deleteUserApi(token, userId) {
+  return apiRequest(`/auth/users/${userId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+}
+
 export function createTaskApi(token, payload) {
   return apiRequest('/tasks', {
     method: 'POST',

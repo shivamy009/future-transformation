@@ -730,6 +730,7 @@ function UsersPage() {
   const userActivitiesLoading = useAppStore((state) => state.userActivitiesLoading)
   const fetchUsers = useAppStore((state) => state.fetchUsers)
   const fetchUserActivities = useAppStore((state) => state.fetchUserActivities)
+  const deleteUser = useAppStore((state) => state.deleteUser)
 
   const createUser = useAuthStore((state) => state.createUser)
 
@@ -739,6 +740,7 @@ function UsersPage() {
   const [role, setRole] = useState('user')
   const [usersTab, setUsersTab] = useState('user')
   const [selectedUser, setSelectedUser] = useState(null)
+  const [deletingUserId, setDeletingUserId] = useState(null)
 
   const filteredUsers = useMemo(
     () => users.filter((u) => (u.role || '').toLowerCase() === usersTab),
@@ -775,6 +777,21 @@ function UsersPage() {
 
   const onCloseUserActivity = () => {
     setSelectedUser(null)
+  }
+
+  const onDeleteUser = async (user) => {
+    setDeletingUserId(user.id)
+    try {
+      await deleteUser(token, user.id)
+      toast.success('User deleted')
+      if (selectedUser?.id === user.id) {
+        setSelectedUser(null)
+      }
+    } catch (error) {
+      toast.error(error.message || 'Unable to delete user')
+    } finally {
+      setDeletingUserId(null)
+    }
   }
 
   return (
@@ -821,17 +838,29 @@ function UsersPage() {
                 <tr>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Email</th>
+                  <th className="px-4 py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.map((u) => (
-                  <tr
-                    key={u.id}
-                    className="table-row-clickable border-b border-slate-200/10 last:border-b-0"
-                    onClick={() => onOpenUserActivity(u)}
-                  >
+                  <tr key={u.id} className="border-b border-slate-200/10 last:border-b-0">
                     <td className="px-4 py-3 font-medium text-slate-100">{u.full_name}</td>
                     <td className="px-4 py-3 text-slate-300">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <button className="btn-secondary px-3 py-1.5 text-xs" type="button" onClick={() => onOpenUserActivity(u)}>
+                          View Logs
+                        </button>
+                        <button
+                          className="btn-danger px-3 py-1.5 text-xs"
+                          type="button"
+                          disabled={deletingUserId === u.id}
+                          onClick={() => onDeleteUser(u)}
+                        >
+                          {deletingUserId === u.id ? 'Deleting...' : 'Delete'}
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>

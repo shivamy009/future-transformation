@@ -25,3 +25,7 @@ dist
 *.njsproj
 *.sln
 *.sw?
+
+# Python cache artifacts
+__pycache__/
+*.py[cod]
