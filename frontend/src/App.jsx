@@ -124,10 +124,10 @@ function LoginPage() {
       <div className="hero-panel">
         <p className="eyebrow">Future Transformation</p>
         <h1 className="mt-3 text-4xl font-semibold leading-tight text-slate-100 md:text-5xl">
-          Build knowledge-driven workflows with AI confidence.
+          Admin builds knowledge. Users solve tasks with AI-powered search.
         </h1>
         <p className="mt-4 max-w-xl text-base text-slate-300">
-          Manage documents, semantic search, and tasks in one modern workspace optimized for teams.
+          A role-based workspace where admins upload documents and assign tasks, and users retrieve grounded answers from semantic search to complete work faster.
         </p>
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
           <div className="feature-tile">
@@ -178,6 +178,7 @@ function LoginPage() {
               <span className="field-label">Full Name</span>
               <input
                 className="field-input"
+                placeholder="Enter full name"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
                 required
@@ -187,12 +188,12 @@ function LoginPage() {
 
           <label className="block">
             <span className="field-label">Email</span>
-            <input className="field-input" type="email" value={email} onChange={(event) => setEmail(event.target.value)} required />
+            <input className="field-input" type="email" placeholder="Enter email address" value={email} onChange={(event) => setEmail(event.target.value)} required />
           </label>
 
           <label className="block">
             <span className="field-label">Password</span>
-            <input className="field-input" type="password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+            <input className="field-input" type="password" placeholder="Enter password" value={password} onChange={(event) => setPassword(event.target.value)} required />
           </label>
 
           <button className="btn-primary w-full" type="submit" disabled={loading}>
