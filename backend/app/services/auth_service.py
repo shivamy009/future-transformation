@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app.core.security import create_access_token, get_password_hash, verify_password
 from app.models.role import Role
 from app.models.user import User
-from app.schemas.auth import LoginResponse, UserRegister, UserSignup
+from app.schemas.auth import LoginResponse, LoginUser, UserRegister, UserSignup
 
 
 def authenticate_user(db: Session, email: str, password: str) -> User:
@@ -26,7 +26,19 @@ def login_user(db: Session, email: str, password: str) -> LoginResponse:
     user = authenticate_user(db, email, password)
     token = create_access_token(subject=str(user.id))
     role_name = user.role.name if user.role else "user"
-    return LoginResponse(access_token=token, token_type="bearer", user_role=role_name)
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",
+        user_role=role_name,
+        user=LoginUser(
+            id=user.id,
+            email=user.email,
+            full_name=user.full_name,
+            role=role_name,
+            is_active=user.is_active,
+            created_at=user.created_at,
+        ),
+    )
 
 
 def create_user(db: Session, payload: UserRegister) -> User:

@@ -19,7 +19,7 @@ export const useAuthStore = create(
         try {
           const loginData = await loginApi(email, password)
           const token = loginData.access_token
-          const me = await meApi(token)
+          const me = loginData.user || await meApi(token)
 
           set({
             token,
