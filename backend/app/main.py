@@ -45,6 +45,6 @@ app.include_router(search_router, prefix=settings.API_V1_STR)
 app.include_router(analytics_router, prefix=settings.API_V1_STR)
 
 
-@app.get("/health")
+@app.get("/ping")
 def health() -> dict[str, str]:
     return {"status": "ok"}
