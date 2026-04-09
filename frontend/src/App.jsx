@@ -25,6 +25,57 @@ import { Link, Navigate, Route, Routes, useLocation, useNavigate } from 'react-r
 import { useAppStore } from './store/appStore'
 import { useAuthStore } from './store/authStore'
 
+function SkeletonLine({ className = '' }) {
+  return <div className={`skeleton ${className}`.trim()} aria-hidden="true" />
+}
+
+function TaskListSkeleton() {
+  return (
+    <div className="space-y-3" aria-hidden="true">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div key={`task-skeleton-${idx}`} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-4">
+          <SkeletonLine className="mb-3 h-4 w-2/5" />
+          <SkeletonLine className="mb-2 h-3.5 w-full" />
+          <SkeletonLine className="mb-3 h-3.5 w-4/5" />
+          <div className="flex items-center justify-between gap-3">
+            <SkeletonLine className="h-6 w-20 rounded-full" />
+            <div className="flex items-center gap-2">
+              <SkeletonLine className="h-8 w-8 rounded-lg" />
+              <SkeletonLine className="h-8 w-8 rounded-lg" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function UsersTableSkeleton() {
+  return (
+    <div className="p-4 space-y-3" aria-hidden="true">
+      {Array.from({ length: 5 }).map((_, idx) => (
+        <div key={`users-skeleton-${idx}`} className="grid grid-cols-2 gap-3">
+          <SkeletonLine className="h-4 w-4/5" />
+          <SkeletonLine className="h-4 w-11/12" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-hidden="true">
+      {Array.from({ length: 4 }).map((_, idx) => (
+        <div key={`metric-skeleton-${idx}`} className="metric-card">
+          <SkeletonLine className="h-3 w-2/3" />
+          <SkeletonLine className="mt-3 h-7 w-1/2" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function LoginPage() {
   const [mode, setMode] = useState('login')
   const [fullName, setFullName] = useState('')
@@ -256,6 +307,9 @@ function TasksPage() {
   const [assignedFilter, setAssignedFilter] = useState('')
   const [page, setPage] = useState(1)
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
+  const [creatingTask, setCreatingTask] = useState(false)
+  const [updatingTaskId, setUpdatingTaskId] = useState(null)
+  const [savingTaskEdit, setSavingTaskEdit] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -284,6 +338,7 @@ function TasksPage() {
 
   const onCreateTask = async (event) => {
     event.preventDefault()
+    setCreatingTask(true)
     try {
       await createTask(token, {
         title: taskTitle,
@@ -304,6 +359,8 @@ function TasksPage() {
       })
     } catch (error) {
       toast.error(error.message || 'Unable to create task')
+    } finally {
+      setCreatingTask(false)
     }
   }
 
@@ -316,11 +373,14 @@ function TasksPage() {
 
   const onToggleStatus = async (taskId, currentStatus) => {
     const nextStatus = currentStatus === 'completed' ? 'pending' : 'completed'
+    setUpdatingTaskId(taskId)
     try {
       await updateTaskStatus(token, taskId, nextStatus)
       toast.success(`Task marked ${nextStatus}`)
     } catch (error) {
       toast.error(error.message || 'Unable to update task')
+    } finally {
+      setUpdatingTaskId(null)
     }
   }
 
@@ -349,6 +409,7 @@ function TasksPage() {
       return
     }
 
+    setSavingTaskEdit(true)
     try {
       await adminUpdateTask(token, editingTaskId, {
         title: editTitle,
@@ -360,6 +421,8 @@ function TasksPage() {
       onCancelEditTask()
     } catch (error) {
       toast.error(error.message || 'Unable to update task')
+    } finally {
+      setSavingTaskEdit(false)
     }
   }
 
@@ -387,7 +450,7 @@ function TasksPage() {
               className="field-input"
               type="number"
               min="1"
-              placeholder="assigned_to"
+              placeholder="Filter by assignee id"
               value={assignedFilter}
               onChange={(event) => { setAssignedFilter(event.target.value); setPage(1) }}
             />
@@ -396,6 +459,7 @@ function TasksPage() {
           )}
           <button
             className="btn-secondary md:col-span-2"
+            disabled={tasksLoading}
             onClick={() =>
               fetchTasks(token, {
                 page,
@@ -410,9 +474,9 @@ function TasksPage() {
         </div>
 
         <div className="mt-4 space-y-3">
-          {tasksLoading && <p className="text-sm text-slate-300">Loading tasks...</p>}
+          {tasksLoading && <TaskListSkeleton />}
           {!tasksLoading && tasks.length === 0 && <p className="text-sm text-slate-300">No tasks found.</p>}
-          {tasks.map((task) => (
+          {!tasksLoading && tasks.map((task) => (
             <div key={task.id} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -428,6 +492,7 @@ function TasksPage() {
                     <button
                       className="task-action-btn task-edit-btn"
                       onClick={() => onStartEditTask(task)}
+                      disabled={creatingTask || savingTaskEdit || updatingTaskId === task.id}
                       aria-label="Edit task"
                       title="Edit task"
                     >
@@ -437,6 +502,7 @@ function TasksPage() {
                   <button
                     className="task-action-btn task-toggle-btn"
                     onClick={() => onToggleStatus(task.id, task.status)}
+                    disabled={creatingTask || savingTaskEdit || updatingTaskId === task.id}
                     aria-label={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
                     title={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
                   >
@@ -449,11 +515,11 @@ function TasksPage() {
                 <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onSaveEditTask}>
                   <label className="block md:col-span-2">
                     <span className="field-label">Title</span>
-                    <input className="field-input" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required />
+                    <input className="field-input" placeholder="Task title" value={editTitle} onChange={(event) => setEditTitle(event.target.value)} required />
                   </label>
                   <label className="block md:col-span-2">
                     <span className="field-label">Description</span>
-                    <textarea className="field-input min-h-24" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
+                    <textarea className="field-input min-h-24" placeholder="Task description" value={editDescription} onChange={(event) => setEditDescription(event.target.value)} />
                   </label>
                   <label className="block">
                     <span className="field-label">Status</span>
@@ -472,8 +538,8 @@ function TasksPage() {
                     </select>
                   </label>
                   <div className="md:col-span-2 flex items-center gap-2">
-                    <button className="btn-primary" type="submit">Save Changes</button>
-                    <button className="btn-secondary" type="button" onClick={onCancelEditTask}>
+                    <button className="btn-primary" disabled={savingTaskEdit} type="submit">{savingTaskEdit ? 'Saving...' : 'Save Changes'}</button>
+                    <button className="btn-secondary" disabled={savingTaskEdit} type="button" onClick={onCancelEditTask}>
                       <X className="icon-inline" aria-hidden="true" />
                       Cancel
                     </button>
@@ -507,11 +573,11 @@ function TasksPage() {
             <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={onCreateTask}>
               <label className="block md:col-span-2">
                 <span className="field-label">Title</span>
-                <input className="field-input" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} required />
+                <input className="field-input" placeholder="Enter task title" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} required />
               </label>
               <label className="block md:col-span-2">
                 <span className="field-label">Description</span>
-                <textarea className="field-input min-h-24" value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} />
+                <textarea className="field-input min-h-24" placeholder="Add details for this task" value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} />
               </label>
               <label className="block md:col-span-2">
                 <span className="field-label">Assign User</span>
@@ -523,8 +589,8 @@ function TasksPage() {
                 </select>
               </label>
               <div className="md:col-span-2 flex items-center gap-2">
-                <button className="btn-primary" type="submit">Create Task</button>
-                <button className="btn-secondary" type="button" onClick={onCloseCreateTaskModal}>Cancel</button>
+                <button className="btn-primary" disabled={creatingTask} type="submit">{creatingTask ? 'Creating...' : 'Create Task'}</button>
+                <button className="btn-secondary" disabled={creatingTask} type="button" onClick={onCloseCreateTaskModal}>Cancel</button>
               </div>
             </form>
           </div>
@@ -565,7 +631,7 @@ function DocumentsPage() {
       <form className="mt-4 space-y-3" onSubmit={onSubmit}>
         <label className="block">
           <span className="field-label">Title</span>
-          <input className="field-input" value={docTitle} onChange={(event) => setDocTitle(event.target.value)} required />
+          <input className="field-input" placeholder="Document title" value={docTitle} onChange={(event) => setDocTitle(event.target.value)} required />
         </label>
         <label className="block">
           <span className="field-label">Document File</span>
@@ -612,20 +678,38 @@ function SearchPage() {
       <form className="mt-4 grid gap-3 md:grid-cols-1" onSubmit={onSubmit}>
         <label className="block">
           <span className="field-label">Query</span>
-          <input className="field-input" value={query} onChange={(event) => setQuery(event.target.value)} required />
+          <input className="field-input" placeholder="Ask from uploaded documents" value={query} onChange={(event) => setQuery(event.target.value)} required />
         </label>
         <button className="btn-primary" disabled={searchLoading} type="submit">{searchLoading ? 'Searching...' : 'Search'}</button>
       </form>
 
       {latestSearch && (
         <div className="mt-5 space-y-4">
-          <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4">
-            <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">LLM Answer</p>
-            <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-slate-100">
-              <Sparkles className="icon-inline" aria-hidden="true" />
-              {formatLlmAnswer(latestSearch.answer) || 'No grounded answer found in uploaded documents.'}
-            </p>
-          </div>
+          {searchLoading ? (
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4" aria-hidden="true">
+              <SkeletonLine className="h-3 w-24" />
+              <SkeletonLine className="mt-3 h-4 w-full" />
+              <SkeletonLine className="mt-2 h-4 w-11/12" />
+              <SkeletonLine className="mt-2 h-4 w-4/5" />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">LLM Answer</p>
+              <p className="mt-2 text-sm leading-relaxed whitespace-pre-line text-slate-100">
+                <Sparkles className="icon-inline" aria-hidden="true" />
+                {formatLlmAnswer(latestSearch.answer) || 'No grounded answer found in uploaded documents.'}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {searchLoading && !latestSearch && (
+        <div className="mt-5 rounded-xl border border-emerald-300/20 bg-emerald-300/10 p-4" aria-hidden="true">
+          <SkeletonLine className="h-3 w-24" />
+          <SkeletonLine className="mt-3 h-4 w-full" />
+          <SkeletonLine className="mt-2 h-4 w-11/12" />
+          <SkeletonLine className="mt-2 h-4 w-4/5" />
         </div>
       )}
     </div>
@@ -675,9 +759,9 @@ function UsersPage() {
       <div className="glass-card">
         <h3 className="text-lg font-semibold text-slate-100"><UserPlus className="icon-inline" aria-hidden="true" />Create User</h3>
         <form className="mt-4 space-y-3" onSubmit={onCreate}>
-          <input className="field-input" placeholder="Full name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-          <input className="field-input" type="email" placeholder="Email" value={email} onChange={(event) => setEmail(event.target.value)} required />
-          <input className="field-input" type="password" placeholder="Password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+          <input className="field-input" placeholder="Enter full name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+          <input className="field-input" type="email" placeholder="Enter email address" value={email} onChange={(event) => setEmail(event.target.value)} required />
+          <input className="field-input" type="password" placeholder="Create password" value={password} onChange={(event) => setPassword(event.target.value)} required />
           <select className="field-input" value={role} onChange={(event) => setRole(event.target.value)}>
             <option value="user">User</option>
             <option value="admin">Admin</option>
@@ -706,7 +790,7 @@ function UsersPage() {
         </div>
 
         <div className="mt-4 overflow-hidden rounded-xl border border-slate-200/10 bg-slate-950/40">
-          {usersLoading && <p className="text-sm text-slate-300">Loading users...</p>}
+          {usersLoading && <UsersTableSkeleton />}
           {!usersLoading && filteredUsers.length === 0 && <p className="p-4 text-sm text-slate-300">No users found.</p>}
           {!usersLoading && filteredUsers.length > 0 && (
             <table className="w-full text-left text-sm text-slate-200">
@@ -745,12 +829,16 @@ function AnalyticsPage() {
   return (
     <div className="glass-card">
       <h3 className="text-lg font-semibold text-slate-100"><BarChart3 className="icon-inline" aria-hidden="true" />Analytics</h3>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="metric-card"><p className="metric-label">Total Tasks</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.total_tasks ?? 0}</p></div>
-        <div className="metric-card"><p className="metric-label">Completed</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.completed_tasks ?? 0}</p></div>
-        <div className="metric-card"><p className="metric-label">Pending</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.pending_tasks ?? 0}</p></div>
-        <div className="metric-card"><p className="metric-label">Searches</p><p className="metric-value">{analyticsLoading ? '...' : analytics?.total_searches_performed ?? 0}</p></div>
-      </div>
+      {analyticsLoading ? (
+        <AnalyticsSkeleton />
+      ) : (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="metric-card"><p className="metric-label">Total Tasks</p><p className="metric-value">{analytics?.total_tasks ?? 0}</p></div>
+          <div className="metric-card"><p className="metric-label">Completed</p><p className="metric-value">{analytics?.completed_tasks ?? 0}</p></div>
+          <div className="metric-card"><p className="metric-label">Pending</p><p className="metric-value">{analytics?.pending_tasks ?? 0}</p></div>
+          <div className="metric-card"><p className="metric-label">Searches</p><p className="metric-value">{analytics?.total_searches_performed ?? 0}</p></div>
+        </div>
+      )}
     </div>
   )
 }
@@ -840,7 +928,8 @@ function App() {
     return (
       <div className="min-h-screen grid place-items-center px-4">
         <div className="glass-card text-center">
-          <p className="text-slate-200">Preparing session...</p>
+          <SkeletonLine className="h-4 w-48" />
+          <SkeletonLine className="mt-3 h-3.5 w-32 mx-auto" />
         </div>
       </div>
     )

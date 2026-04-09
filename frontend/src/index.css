@@ -47,11 +47,11 @@ textarea.field-input {
 }
 
 .btn-primary {
-	@apply rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2.5 font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60;
+	@apply cursor-pointer rounded-xl bg-gradient-to-r from-cyan-400 to-emerald-400 px-4 py-2.5 font-semibold text-slate-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 .btn-secondary {
-	@apply rounded-xl border border-slate-200/20 bg-slate-800/70 px-4 py-2.5 font-semibold text-slate-200 transition hover:bg-slate-700;
+	@apply cursor-pointer rounded-xl border border-slate-200/20 bg-slate-800/70 px-4 py-2.5 font-semibold text-slate-200 transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 .role-chip {
@@ -87,7 +87,7 @@ textarea.field-input {
 }
 
 .task-action-btn {
-	@apply inline-flex items-center rounded-lg border border-slate-200/15 px-3 py-1.5 text-xs font-semibold text-slate-100 transition;
+	@apply inline-flex cursor-pointer items-center rounded-lg border border-slate-200/15 px-3 py-1.5 text-xs font-semibold text-slate-100 transition disabled:cursor-not-allowed disabled:opacity-60;
 }
 
 .task-edit-btn {
@@ -184,4 +184,25 @@ h3 {
 
 .modal-panel {
 	@apply w-full max-w-2xl rounded-2xl border border-slate-200/10 bg-slate-900/95 p-6 shadow-2xl shadow-black/50;
+}
+
+.skeleton {
+	@apply rounded-md bg-slate-700/60;
+	position: relative;
+	overflow: hidden;
+}
+
+.skeleton::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	transform: translateX(-100%);
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+	animation: skeleton-shimmer 1.3s infinite;
+}
+
+@keyframes skeleton-shimmer {
+	100% {
+		transform: translateX(100%);
+	}
 }
