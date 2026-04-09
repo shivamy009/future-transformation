@@ -33,6 +33,7 @@ def create_task_endpoint(
 def list_tasks_endpoint(
     status_filter: Optional[str] = Query(None, alias="status", pattern="^(pending|completed)$"),
     assigned_to: Optional[int] = Query(None),
+    assigned_name: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(10, ge=1, le=100),
     db: Session = Depends(get_db),
@@ -45,6 +46,7 @@ def list_tasks_endpoint(
         user_id=current_user.id,
         status_filter=status_filter,
         assigned_to=assigned_to,
+        assigned_name=assigned_name,
         page=page,
         page_size=page_size,
     )

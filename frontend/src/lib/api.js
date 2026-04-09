@@ -120,6 +120,7 @@ export function listTasksApi(token, filters = {}) {
   const params = new URLSearchParams()
   if (filters.status) params.append('status', filters.status)
   if (filters.assigned_to) params.append('assigned_to', String(filters.assigned_to))
+  if (filters.assigned_name) params.append('assigned_name', String(filters.assigned_name))
   if (filters.page) params.append('page', String(filters.page))
   if (filters.page_size) params.append('page_size', String(filters.page_size))
 

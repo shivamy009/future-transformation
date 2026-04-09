@@ -223,10 +223,10 @@ function AppShell({ children }) {
   const links = useMemo(() => {
     const base = [
       { to: '/tasks', label: 'Tasks', icon: LayoutList },
-      { to: '/search', label: 'Search', icon: Search },
+      { to: '/search', label: 'AI Search', icon: Search },
     ]
     if (role === 'admin') {
-      base.push({ to: '/documents', label: 'Documents', icon: FileText })
+      base.push({ to: '/documents', label: 'Knowledge Base', icon: FileText })
       base.push({ to: '/users', label: 'Users', icon: BookUser })
       base.push({ to: '/analytics', label: 'Analytics', icon: BarChart3 })
     }
@@ -330,7 +330,7 @@ function TasksPage() {
       page,
       page_size: 10,
       status: statusFilter || undefined,
-      assigned_to: role === 'admin' ? assignedFilter || undefined : undefined,
+      assigned_name: role === 'admin' ? assignedFilter || undefined : undefined,
     }).catch((error) => toast.error(error.message || 'Unable to fetch tasks'))
   }, [fetchTasks, token, page, statusFilter, assignedFilter])
 
@@ -359,7 +359,7 @@ function TasksPage() {
         page: 1,
         page_size: 10,
         status: statusFilter || undefined,
-        assigned_to: role === 'admin' ? assignedFilter || undefined : undefined,
+        assigned_name: role === 'admin' ? assignedFilter || undefined : undefined,
       })
     } catch (error) {
       toast.error(error.message || 'Unable to create task')
@@ -472,9 +472,8 @@ function TasksPage() {
           {role === 'admin' ? (
             <input
               className="field-input"
-              type="number"
-              min="1"
-              placeholder="Filter by assignee id"
+              type="text"
+              placeholder="Filter by assignee name"
               value={assignedFilter}
               onChange={(event) => { setAssignedFilter(event.target.value); setPage(1) }}
             />
@@ -489,7 +488,7 @@ function TasksPage() {
                 page,
                 page_size: 10,
                 status: statusFilter || undefined,
-                assigned_to: role === 'admin' ? assignedFilter || undefined : undefined,
+                assigned_name: role === 'admin' ? assignedFilter || undefined : undefined,
               })
             }
           >
@@ -718,7 +717,7 @@ function SearchPage() {
 
   return (
     <div className="glass-card">
-      <h3 className="text-lg font-semibold text-slate-100"><BrainCircuit className="icon-inline" aria-hidden="true" />Semantic Search + LLM (K=5)</h3>
+      <h3 className="text-lg font-semibold text-slate-100"><BrainCircuit className="icon-inline" aria-hidden="true" />Knowledge Assistant</h3>
       <form className="mt-4 grid gap-3 md:grid-cols-1" onSubmit={onSubmit}>
         <label className="block">
           <span className="field-label">Query</span>

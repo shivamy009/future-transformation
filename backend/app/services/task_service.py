@@ -34,6 +34,7 @@ def list_tasks(
     user_id: int,
     status_filter: Optional[str],
     assigned_to: Optional[int],
+    assigned_name: Optional[str],
     page: int,
     page_size: int,
 ) -> tuple[list[Task], int]:
@@ -47,6 +48,10 @@ def list_tasks(
 
     if assigned_to is not None and role_name == "admin":
         query = query.filter(Task.assigned_to == assigned_to)
+
+    if assigned_name and role_name == "admin":
+        search_value = f"%{assigned_name.strip()}%"
+        query = query.join(User, Task.assigned_to == User.id).filter(User.full_name.ilike(search_value))
 
     total = query.count()
     items = (
