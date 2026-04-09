@@ -91,6 +91,13 @@ export function listUsersApi(token) {
   })
 }
 
+export function userActivitiesApi(token, userId) {
+  return apiRequest(`/auth/users/${userId}/activities`, {
+    method: 'GET',
+    headers: authHeaders(token),
+  })
+}
+
 export function createTaskApi(token, payload) {
   return apiRequest('/tasks', {
     method: 'POST',

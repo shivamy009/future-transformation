@@ -1,13 +1,15 @@
 from fastapi import APIRouter, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
+import json
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.deps import get_current_user, require_roles
 from app.models.user import User
+from app.schemas.activity import ActivityOut, UserActivityResponse
 from app.schemas.auth import LoginResponse, UserRegister, UserSignup
 from app.schemas.user import UserOut
-from app.services.activity_service import log_activity
+from app.services.activity_service import list_activities_by_email, log_activity
 from app.services.auth_service import create_user, login_user, signup_user
 
 
@@ -83,3 +85,39 @@ def list_users(db: Session = Depends(get_db)):
         )
         for user in users
     ]
+
+
+@router.get(
+    "/users/{user_id}/activities",
+    response_model=UserActivityResponse,
+    dependencies=[Depends(require_roles(["admin"]))],
+)
+def list_user_activities(user_id: int, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        return UserActivityResponse(user_id=user_id, user_email="", activities=[])
+
+    records = list_activities_by_email(db, user.email, limit=50)
+
+    activities: list[ActivityOut] = []
+    for record in records:
+        metadata_value = {}
+        if record.metadata_json:
+            try:
+                parsed = json.loads(record.metadata_json)
+                if isinstance(parsed, dict):
+                    metadata_value = parsed
+            except json.JSONDecodeError:
+                metadata_value = {}
+
+        activities.append(
+            ActivityOut(
+                id=record.id,
+                action=record.action,
+                actor_email=record.actor_email,
+                metadata=metadata_value,
+                created_at=record.created_at,
+            )
+        )
+
+    return UserActivityResponse(user_id=user.id, user_email=user.email, activities=activities)

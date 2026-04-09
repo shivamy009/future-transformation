@@ -726,7 +726,10 @@ function UsersPage() {
   const token = useAuthStore((state) => state.token)
   const users = useAppStore((state) => state.users)
   const usersLoading = useAppStore((state) => state.usersLoading)
+  const userActivities = useAppStore((state) => state.userActivities)
+  const userActivitiesLoading = useAppStore((state) => state.userActivitiesLoading)
   const fetchUsers = useAppStore((state) => state.fetchUsers)
+  const fetchUserActivities = useAppStore((state) => state.fetchUserActivities)
 
   const createUser = useAuthStore((state) => state.createUser)
 
@@ -735,6 +738,7 @@ function UsersPage() {
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('user')
   const [usersTab, setUsersTab] = useState('user')
+  const [selectedUser, setSelectedUser] = useState(null)
 
   const filteredUsers = useMemo(
     () => users.filter((u) => (u.role || '').toLowerCase() === usersTab),
@@ -758,6 +762,19 @@ function UsersPage() {
     } catch (error) {
       toast.error(error.message || 'Unable to create user')
     }
+  }
+
+  const onOpenUserActivity = async (user) => {
+    setSelectedUser(user)
+    try {
+      await fetchUserActivities(token, user.id)
+    } catch (error) {
+      toast.error(error.message || 'Unable to fetch user activity')
+    }
+  }
+
+  const onCloseUserActivity = () => {
+    setSelectedUser(null)
   }
 
   return (
@@ -808,7 +825,11 @@ function UsersPage() {
               </thead>
               <tbody>
                 {filteredUsers.map((u) => (
-                  <tr key={u.id} className="border-b border-slate-200/10 last:border-b-0">
+                  <tr
+                    key={u.id}
+                    className="table-row-clickable border-b border-slate-200/10 last:border-b-0"
+                    onClick={() => onOpenUserActivity(u)}
+                  >
                     <td className="px-4 py-3 font-medium text-slate-100">{u.full_name}</td>
                     <td className="px-4 py-3 text-slate-300">{u.email}</td>
                   </tr>
@@ -818,6 +839,50 @@ function UsersPage() {
           )}
         </div>
       </div>
+
+      {selectedUser && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="User activity">
+          <div className="modal-panel">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-100">User Activity</h3>
+                <p className="text-sm text-slate-300">{selectedUser.full_name} ({selectedUser.email})</p>
+              </div>
+              <button className="task-action-btn task-edit-btn" type="button" onClick={onCloseUserActivity} aria-label="Close user activity modal">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-3 max-h-[56vh] overflow-auto pr-1">
+              {userActivitiesLoading && (
+                <div className="space-y-3" aria-hidden="true">
+                  {Array.from({ length: 5 }).map((_, idx) => (
+                    <div key={`activity-skeleton-${idx}`} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-3">
+                      <SkeletonLine className="h-4 w-1/3" />
+                      <SkeletonLine className="mt-2 h-3.5 w-full" />
+                      <SkeletonLine className="mt-2 h-3.5 w-4/5" />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {!userActivitiesLoading && userActivities.length === 0 && (
+                <p className="text-sm text-slate-300">No activity found for this user.</p>
+              )}
+
+              {!userActivitiesLoading && userActivities.map((item) => (
+                <div key={item.id} className="rounded-xl border border-slate-200/10 bg-slate-950/40 p-3">
+                  <p className="text-sm font-semibold text-slate-100">{item.action}</p>
+                  <p className="mt-1 text-xs text-slate-400">{new Date(item.created_at).toLocaleString()}</p>
+                  {item.metadata && Object.keys(item.metadata).length > 0 && (
+                    <pre className="activity-meta mt-2">{JSON.stringify(item.metadata, null, 2)}</pre>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -16,3 +16,13 @@ def log_activity(
     )
     db.add(record)
     db.commit()
+
+
+def list_activities_by_email(db: Session, actor_email: str, limit: int = 50) -> list[ActivityLog]:
+    return (
+        db.query(ActivityLog)
+        .filter(ActivityLog.actor_email == actor_email)
+        .order_by(ActivityLog.created_at.desc())
+        .limit(limit)
+        .all()
+    )

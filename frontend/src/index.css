@@ -195,6 +195,14 @@ h3 {
 	@apply w-full max-w-2xl rounded-2xl border border-slate-200/10 bg-slate-900/95 p-6 shadow-2xl shadow-black/50;
 }
 
+.table-row-clickable {
+	@apply cursor-pointer transition hover:bg-slate-900/55;
+}
+
+.activity-meta {
+	@apply overflow-x-auto rounded-lg border border-slate-200/10 bg-slate-900/70 p-2 text-xs text-slate-300;
+}
+
 .skeleton {
 	@apply rounded-md bg-slate-700/60;
 	position: relative;

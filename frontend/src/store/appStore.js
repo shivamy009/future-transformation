@@ -5,6 +5,7 @@ import {
   analyticsApi,
   createTaskApi,
   listTasksApi,
+  userActivitiesApi,
   listUsersApi,
   searchApi,
   updateTaskStatusApi,
@@ -19,9 +20,11 @@ export const useAppStore = create((set, get) => ({
   uploadLoading: false,
   analyticsLoading: false,
   usersLoading: false,
+  userActivitiesLoading: false,
   latestSearch: null,
   analytics: null,
   users: [],
+  userActivities: [],
 
   fetchTasks: async (token, filters = {}) => {
     set({ tasksLoading: true })
@@ -104,6 +107,18 @@ export const useAppStore = create((set, get) => ({
     }
   },
 
+  fetchUserActivities: async (token, userId) => {
+    set({ userActivitiesLoading: true })
+    try {
+      const data = await userActivitiesApi(token, userId)
+      set({ userActivities: data.activities || [], userActivitiesLoading: false })
+      return data
+    } catch (error) {
+      set({ userActivitiesLoading: false })
+      throw error
+    }
+  },
+
   resetAppState: () =>
     set({
       tasks: [],
@@ -111,5 +126,6 @@ export const useAppStore = create((set, get) => ({
       latestSearch: null,
       analytics: null,
       users: [],
+      userActivities: [],
     }),
 }))
