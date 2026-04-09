@@ -98,6 +98,15 @@ textarea.field-input {
 	@apply border-cyan-300/25 bg-cyan-300/10 text-cyan-100 hover:bg-cyan-300/20;
 }
 
+.btn-spinner {
+	width: 0.95rem;
+	height: 0.95rem;
+	border: 2px solid rgba(226, 232, 240, 0.35);
+	border-top-color: rgba(226, 232, 240, 1);
+	border-radius: 9999px;
+	animation: btn-spin 0.7s linear infinite;
+}
+
 .sidebar-card {
 	@apply border-cyan-300/15 p-4 sm:p-6;
 }
@@ -204,5 +213,11 @@ h3 {
 @keyframes skeleton-shimmer {
 	100% {
 		transform: translateX(100%);
+	}
+}
+
+@keyframes btn-spin {
+	100% {
+		transform: rotate(360deg);
 	}
 }

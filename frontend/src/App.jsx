@@ -506,7 +506,13 @@ function TasksPage() {
                     aria-label={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
                     title={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
                   >
-                    {task.status === 'pending' ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : <RotateCcw className="h-4 w-4" aria-hidden="true" />}
+                    {updatingTaskId === task.id ? (
+                      <span className="btn-spinner" aria-hidden="true" />
+                    ) : task.status === 'pending' ? (
+                      <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4" aria-hidden="true" />
+                    )}
                   </button>
                 </div>
               </div>
