@@ -27,6 +27,7 @@ class TaskOut(BaseModel):
     description: Optional[str]
     status: str
     assigned_to: int
+    assigned_to_name: Optional[str] = None
     created_by: int
     created_at: datetime
 

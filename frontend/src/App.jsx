@@ -505,7 +505,7 @@ function TasksPage() {
                 <div>
                   <p className="font-semibold text-slate-100">{task.title}</p>
                   <p className="text-sm text-slate-300">{task.description || 'No description'}</p>
-                  <p className="mt-1 text-xs text-slate-400">Task #{task.id} | Assigned: {task.assigned_to}</p>
+                  <p className="mt-1 text-xs text-slate-400">Assigned: {task.assigned_to_name || task.assigned_to}</p>
                 </div>
                 <div className="task-actions">
                   <span className={`status-chip ${task.status === 'completed' ? 'status-done' : 'status-pending'}`}>

@@ -19,3 +19,9 @@ class Task(Base):
 
     assignee = relationship("User", foreign_keys=[assigned_to], back_populates="assigned_tasks")
     creator = relationship("User", foreign_keys=[created_by], back_populates="created_tasks")
+
+    @property
+    def assigned_to_name(self) -> str:
+        if self.assignee and self.assignee.full_name:
+            return self.assignee.full_name
+        return str(self.assigned_to)
