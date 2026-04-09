@@ -4,6 +4,7 @@ import {
   adminUpdateTaskApi,
   analyticsApi,
   createTaskApi,
+  deleteTaskApi,
   deleteUserApi,
   listTasksApi,
   userActivitiesApi,
@@ -58,6 +59,18 @@ export const useAppStore = create((set, get) => ({
       tasks: state.tasks.map((task) => (task.id === updated.id ? updated : task)),
     }))
     return updated
+  },
+
+  deleteTask: async (token, taskId) => {
+    await deleteTaskApi(token, taskId)
+    set((state) => ({
+      tasks: state.tasks.filter((task) => task.id !== taskId),
+      tasksMeta: {
+        ...state.tasksMeta,
+        total: Math.max(0, (state.tasksMeta.total || 0) - 1),
+      },
+    }))
+    return true
   },
 
   uploadDocument: async (token, payload) => {

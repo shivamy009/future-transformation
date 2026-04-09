@@ -152,6 +152,13 @@ export function adminUpdateTaskApi(token, taskId, payload) {
   })
 }
 
+export function deleteTaskApi(token, taskId) {
+  return apiRequest(`/tasks/${taskId}`, {
+    method: 'DELETE',
+    headers: authHeaders(token),
+  })
+}
+
 export function uploadDocumentApi(token, { title, file }) {
   const form = new FormData()
   form.append('title', title)

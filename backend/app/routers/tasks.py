@@ -8,7 +8,7 @@ from app.core.deps import get_current_user, require_roles
 from app.models.user import User
 from app.schemas.task import TaskAdminUpdate, TaskCreate, TaskListResponse, TaskOut, TaskStatusUpdate
 from app.services.activity_service import log_activity
-from app.services.task_service import admin_update_task, create_task, list_tasks, update_task_status
+from app.services.task_service import admin_update_task, create_task, delete_task, list_tasks, update_task_status
 
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
@@ -96,3 +96,24 @@ def admin_update_task_endpoint(
         {"task_id": task.id, "admin_edit": True},
     )
     return task
+
+
+@router.delete(
+    "/{task_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_roles(["admin"]))],
+)
+def delete_task_endpoint(
+    task_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    delete_task(db=db, task_id=task_id)
+
+    log_activity(
+        db,
+        "task_delete",
+        current_user.email,
+        {"task_id": task_id},
+    )
+    return None

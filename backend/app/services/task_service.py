@@ -121,3 +121,12 @@ def admin_update_task(
     db.commit()
     db.refresh(task)
     return task
+
+
+def delete_task(db: Session, task_id: int) -> None:
+    task = db.query(Task).filter(Task.id == task_id).first()
+    if not task:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+
+    db.delete(task)
+    db.commit()

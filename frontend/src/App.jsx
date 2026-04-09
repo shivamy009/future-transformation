@@ -12,6 +12,7 @@ import {
   LogOut,
   Pencil,
   Plus,
+  Trash2,
   Search,
   ShieldCheck,
   Sparkles,
@@ -299,6 +300,7 @@ function TasksPage() {
   const createTask = useAppStore((state) => state.createTask)
   const updateTaskStatus = useAppStore((state) => state.updateTaskStatus)
   const adminUpdateTask = useAppStore((state) => state.adminUpdateTask)
+  const deleteTask = useAppStore((state) => state.deleteTask)
 
   const [taskTitle, setTaskTitle] = useState('')
   const [taskDescription, setTaskDescription] = useState('')
@@ -309,6 +311,7 @@ function TasksPage() {
   const [showCreateTaskModal, setShowCreateTaskModal] = useState(false)
   const [creatingTask, setCreatingTask] = useState(false)
   const [updatingTaskId, setUpdatingTaskId] = useState(null)
+  const [deletingTaskId, setDeletingTaskId] = useState(null)
   const [savingTaskEdit, setSavingTaskEdit] = useState(false)
   const [editingTaskId, setEditingTaskId] = useState(null)
   const [editTitle, setEditTitle] = useState('')
@@ -381,6 +384,26 @@ function TasksPage() {
       toast.error(error.message || 'Unable to update task')
     } finally {
       setUpdatingTaskId(null)
+    }
+  }
+
+  const onDeleteTask = async (task) => {
+    const shouldDelete = window.confirm(`Delete task "${task.title}"?`)
+    if (!shouldDelete) {
+      return
+    }
+
+    setDeletingTaskId(task.id)
+    try {
+      await deleteTask(token, task.id)
+      toast.success('Task deleted')
+      if (editingTaskId === task.id) {
+        onCancelEditTask()
+      }
+    } catch (error) {
+      toast.error(error.message || 'Unable to delete task')
+    } finally {
+      setDeletingTaskId(null)
     }
   }
 
@@ -492,17 +515,30 @@ function TasksPage() {
                     <button
                       className="task-action-btn task-edit-btn"
                       onClick={() => onStartEditTask(task)}
-                      disabled={creatingTask || savingTaskEdit || updatingTaskId === task.id}
+                      disabled={creatingTask || savingTaskEdit || updatingTaskId === task.id || deletingTaskId === task.id}
                       aria-label="Edit task"
                       title="Edit task"
                     >
                       <Pencil className="h-4 w-4" aria-hidden="true" />
+                      Edit
+                    </button>
+                  )}
+                  {role === 'admin' && (
+                    <button
+                      className="task-action-btn task-delete-btn"
+                      onClick={() => onDeleteTask(task)}
+                      disabled={creatingTask || savingTaskEdit || updatingTaskId === task.id || deletingTaskId === task.id}
+                      aria-label="Delete task"
+                      title="Delete task"
+                    >
+                      {deletingTaskId === task.id ? <span className="btn-spinner" aria-hidden="true" /> : <Trash2 className="h-4 w-4" aria-hidden="true" />}
+                      Delete
                     </button>
                   )}
                   <button
                     className="task-action-btn task-toggle-btn"
                     onClick={() => onToggleStatus(task.id, task.status)}
-                    disabled={creatingTask || savingTaskEdit || updatingTaskId === task.id}
+                    disabled={creatingTask || savingTaskEdit || updatingTaskId === task.id || deletingTaskId === task.id}
                     aria-label={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
                     title={task.status === 'pending' ? 'Mark completed' : 'Mark pending'}
                   >
@@ -513,6 +549,7 @@ function TasksPage() {
                     ) : (
                       <RotateCcw className="h-4 w-4" aria-hidden="true" />
                     )}
+                    {task.status === 'pending' ? 'Mark Completed' : 'Mark Pending'}
                   </button>
                 </div>
               </div>
@@ -739,6 +776,8 @@ function UsersPage() {
   const [password, setPassword] = useState('')
   const [role, setRole] = useState('user')
   const [usersTab, setUsersTab] = useState('user')
+  const [showCreateUserModal, setShowCreateUserModal] = useState(false)
+  const [creatingUser, setCreatingUser] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [deletingUserId, setDeletingUserId] = useState(null)
 
@@ -753,6 +792,7 @@ function UsersPage() {
 
   const onCreate = async (event) => {
     event.preventDefault()
+    setCreatingUser(true)
     try {
       await createUser({ email, full_name: fullName, password, role })
       toast.success('User created')
@@ -760,10 +800,21 @@ function UsersPage() {
       setFullName('')
       setPassword('')
       setRole('user')
+      setShowCreateUserModal(false)
       await fetchUsers(token)
     } catch (error) {
       toast.error(error.message || 'Unable to create user')
+    } finally {
+      setCreatingUser(false)
     }
+  }
+
+  const onCloseCreateUserModal = () => {
+    setShowCreateUserModal(false)
+    setEmail('')
+    setFullName('')
+    setPassword('')
+    setRole('user')
   }
 
   const onOpenUserActivity = async (user) => {
@@ -795,23 +846,15 @@ function UsersPage() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-2">
+    <div className="space-y-5">
       <div className="glass-card">
-        <h3 className="text-lg font-semibold text-slate-100"><UserPlus className="icon-inline" aria-hidden="true" />Create User</h3>
-        <form className="mt-4 space-y-3" onSubmit={onCreate}>
-          <input className="field-input" placeholder="Enter full name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
-          <input className="field-input" type="email" placeholder="Enter email address" value={email} onChange={(event) => setEmail(event.target.value)} required />
-          <input className="field-input" type="password" placeholder="Create password" value={password} onChange={(event) => setPassword(event.target.value)} required />
-          <select className="field-input" value={role} onChange={(event) => setRole(event.target.value)}>
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-          </select>
-          <button className="btn-primary w-full" type="submit">Create Account</button>
-        </form>
-      </div>
-
-      <div className="glass-card">
-        <h3 className="text-lg font-semibold text-slate-100"><BookUser className="icon-inline" aria-hidden="true" />Users</h3>
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h3 className="text-lg font-semibold text-slate-100"><BookUser className="icon-inline" aria-hidden="true" />Users</h3>
+          <button className="btn-primary" type="button" onClick={() => setShowCreateUserModal(true)}>
+            <Plus className="icon-inline" aria-hidden="true" />
+            Add User
+          </button>
+        </div>
         <div className="auth-switcher mt-4">
           <button
             type="button"
@@ -868,6 +911,33 @@ function UsersPage() {
           )}
         </div>
       </div>
+
+      {showCreateUserModal && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Create user">
+          <div className="modal-panel">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-lg font-semibold text-slate-100"><UserPlus className="icon-inline" aria-hidden="true" />Create User</h3>
+              <button className="task-action-btn task-edit-btn" type="button" onClick={onCloseCreateUserModal} aria-label="Close create user modal">
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+
+            <form className="mt-4 space-y-3" onSubmit={onCreate}>
+              <input className="field-input" placeholder="Enter full name" value={fullName} onChange={(event) => setFullName(event.target.value)} required />
+              <input className="field-input" type="email" placeholder="Enter email address" value={email} onChange={(event) => setEmail(event.target.value)} required />
+              <input className="field-input" type="password" placeholder="Create password" value={password} onChange={(event) => setPassword(event.target.value)} required />
+              <select className="field-input" value={role} onChange={(event) => setRole(event.target.value)}>
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+              <div className="flex items-center gap-2">
+                <button className="btn-primary" disabled={creatingUser} type="submit">{creatingUser ? 'Creating...' : 'Create Account'}</button>
+                <button className="btn-secondary" disabled={creatingUser} type="button" onClick={onCloseCreateUserModal}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {selectedUser && (
         <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="User activity">
